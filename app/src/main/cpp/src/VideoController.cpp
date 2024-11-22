@@ -11,6 +11,7 @@ extern "C" {
 }
 
 #define LOG_TAG "VideoController"
+#define FFMPEG_LOG true
 
 int VideoController::encodeVideoWithImg(const char *imgInputPath, const char *videoOutputPath) {
     VideoDecoder videoDecoder;
@@ -37,7 +38,9 @@ void av_log_default_callback(void *avcl, int level, const char *fmt,
 }
 
 VideoController::VideoController() {
-    av_log_set_callback(av_log_default_callback);
+    if(FFMPEG_LOG) {
+        av_log_set_callback(av_log_default_callback);
+    }
 }
 
 

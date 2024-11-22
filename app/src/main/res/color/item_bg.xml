@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/color/color_state_list.xml -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true" android:color="#88000000"/> <!-- 半透明黑色 -->
+    <item android:color="#FFFFFF"/> <!-- 默认白色 -->
+</selector>

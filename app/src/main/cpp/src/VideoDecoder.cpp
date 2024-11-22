@@ -14,9 +14,6 @@ extern "C" {
 #define LOG_TAG "VideoDecoder"
 
 int VideoDecoder::decodeFile(const char *filePath, DecodeVideoCallback &decodeCallback) {
-    if(strEndWith(filePath, ".png")) {
-        return decodeVideo(filePath, decodeCallback);
-    }
     return decodeVideo(filePath, decodeCallback);
 }
 
@@ -107,9 +104,9 @@ int VideoDecoder::decodeVideo(const char *filePath, DecodeVideoCallback &decodeC
                         decodeCallback(frameData);
                     }
                     av_frame_free(&yuvFrame);
+                } else {
+                    break;
                 }
-                //img only need one
-                break;
             }
         } else {
             log(LOG_TAG, "read_frame fail", ret);
