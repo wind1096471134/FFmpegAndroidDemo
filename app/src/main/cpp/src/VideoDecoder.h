@@ -27,10 +27,11 @@ private:
     const AVCodec *avCodec = nullptr;
 
     int decodeVideo(const char *filePath, DecodeVideoCallback &decodeCallback);
+    void freeResource();
 public:
     VideoDecoder();
     int decodeFile(const char *filePath, DecodeVideoCallback &decodeCallback);
-    void destroy();
+    ~VideoDecoder();
 };
 
 #endif //FFMPEGDEMO_VIDEODECODER_H

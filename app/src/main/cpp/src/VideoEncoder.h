@@ -12,15 +12,35 @@ extern "C" {
 #include "libavformat/avformat.h"
 }
 
+struct VideoEncodeParam {
+    int w;
+    int h;
+    int fps;
+    int bitRate;
+    int inputDataFormat;
+};
+
 class VideoEncoder {
 private:
     AVFormatContext *outputFormatContext = nullptr;
     AVCodecContext *avCodecContext = nullptr;
+    AVStream *avStream = nullptr;
     const AVCodec *codec = nullptr;
+    int frameCount = 0;
+    void freeResource();
+
 public:
     VideoEncoder();
-    int encodeImgToVideo(const AVFrame *imgFrame, const char *outputFile);
-    void destroy();
+    //编码开始，输入数据前必须调用一次
+    int encodeStart(const char *outputFile, VideoEncodeParam &param);
+    //输入每一帧数据
+    int encodeFrame(const AVFrame *imgFrame);
+    //编码结束，数据输入结束必须调用一次
+    int encodeEnd();
+    ~VideoEncoder();
 };
+
+//tools method
+int videoEncoder_encodeImgToVideo(const AVFrame *avFrame, const char *outputFile, VideoEncodeParam &param, int durationSecond);
 
 #endif //FFMPEGDEMO_VIDEOENCODER_H

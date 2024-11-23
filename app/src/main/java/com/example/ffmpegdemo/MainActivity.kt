@@ -2,11 +2,13 @@ package com.example.ffmpegdemo
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -28,10 +30,10 @@ class MainActivity : AppCompatActivity() {
     )
 
     class CustomViewHolder(
-        view: View
-    ) : ViewHolder(view) {
-        val titleView: TextView = view as TextView
-    }
+        root: View,
+        val titleView: TextView
+    ) : ViewHolder(root)
+
     private val actionAdapter = object : Adapter<CustomViewHolder>() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CustomViewHolder {
             val textView = TextView(parent.context).apply {
@@ -42,7 +44,13 @@ class MainActivity : AppCompatActivity() {
                 setPadding(padding, padding, padding, padding)
                 setBackgroundResource(R.color.item_bg)
             }
-            return CustomViewHolder(textView)
+            val root = FrameLayout(parent.context).apply {
+                setPadding(0,0,0, (resources.displayMetrics.density * 1).toInt())
+                setBackgroundColor(Color.GRAY)
+                layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            }
+            root.addView(textView)
+            return CustomViewHolder(root, textView)
         }
 
         override fun getItemCount(): Int {
@@ -82,6 +90,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun encodeImgToVideo() {
+        binding.loading.visibility = View.VISIBLE
         threadPoolExecutor.execute {
             val inputFile = baseContext.filesDir.absolutePath + "/logo.png"
             val file = File(inputFile)
@@ -92,15 +101,16 @@ class MainActivity : AppCompatActivity() {
                 outputStream.flush()
                 outputStream.close()
             }
-            val outputFile = baseContext.filesDir.absolutePath + "/logo.mp4"
+            val outputFile = baseContext.filesDir.absolutePath + "/imgToVideo.mp4"
             val ret = ffmpegEncodeImgToVideo(inputFile, outputFile)
-            toastInUiThread(if(ret) "success" else "fail")
+            resultInUiThread(if(ret) "编码成功，文件保存到：$outputFile" else "操作失败")
         }
     }
 
-    private fun toastInUiThread(msg: String) {
+    private fun resultInUiThread(msg: String) {
         binding.actionList.post {
             Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
+            binding.loading.visibility = View.GONE
         }
     }
 

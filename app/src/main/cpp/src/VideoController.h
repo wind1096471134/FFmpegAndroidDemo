@@ -11,7 +11,7 @@
 class VideoController{
 public:
     VideoController();
-
-    int encodeVideoWithImg(const char *imgInputPath, const char *videoOutputPath);
+    ~VideoController();
+    int encodeImgToVideo(const char *imgInputPath, const char *videoOutputPath);
 };
 #endif //FFMPEGDEMO_VIDEOCONTROLLER_H

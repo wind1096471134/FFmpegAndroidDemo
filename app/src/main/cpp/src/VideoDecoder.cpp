@@ -17,17 +17,6 @@ int VideoDecoder::decodeFile(const char *filePath, DecodeVideoCallback &decodeCa
     return decodeVideo(filePath, decodeCallback);
 }
 
-void VideoDecoder::destroy() {
-    if(avCodecContext != nullptr) {
-        avcodec_free_context(&avCodecContext);
-    }
-    if(avFormatContext != nullptr) {
-        //avformat_free_context(avFormatContext);
-        avformat_close_input(&avFormatContext);
-    }
-    avCodec = nullptr;
-}
-
 VideoDecoder::VideoDecoder() {
 
 }
@@ -36,30 +25,30 @@ int VideoDecoder::decodeVideo(const char *filePath, DecodeVideoCallback &decodeC
     int ret = avformat_open_input(&avFormatContext, filePath, nullptr, nullptr);
     if(ret < 0){
         log(LOG_TAG, "avformat_open_input fail", ret);
-        destroy();
+        freeResource();
         return -1;
     }
     int streamId = av_find_best_stream(avFormatContext, AVMEDIA_TYPE_VIDEO, -1, -1, &avCodec, 0);
     if(streamId < 0 || avCodec == nullptr) {
         log(LOG_TAG, "av_find_best_stream fail", ret);
-        destroy();
+        freeResource();
         return -1;
     }
     avCodecContext = avcodec_alloc_context3(avCodec);
     if(avCodecContext == nullptr) {
         log(LOG_TAG, "avcodec_alloc_context3");
-        destroy();
+        freeResource();
         return -1;
     }
     if(avcodec_parameters_to_context(avCodecContext, avFormatContext->streams[streamId]->codecpar) < 0) {
         log(LOG_TAG, "avcodec_parameters_from_context fail", ret);
-        destroy();
+        freeResource();
         return -1;
     }
     ret = avcodec_open2(avCodecContext, avCodec, nullptr);
     if(ret < 0){
         log(LOG_TAG, "avcodec_open2", ret);
-        destroy();
+        freeResource();
         return -1;
     }
 
@@ -115,6 +104,21 @@ int VideoDecoder::decodeVideo(const char *filePath, DecodeVideoCallback &decodeC
     }
     av_packet_free(&avPacket);
     av_frame_free(&avFrame);
-    destroy();
+    freeResource();
     return 0;
+}
+
+void VideoDecoder::freeResource() {
+    if(avCodecContext != nullptr) {
+        avcodec_free_context(&avCodecContext);
+    }
+    if(avFormatContext != nullptr) {
+        //avformat_free_context(avFormatContext);
+        avformat_close_input(&avFormatContext);
+    }
+    avCodec = nullptr;
+}
+
+VideoDecoder::~VideoDecoder() {
+    freeResource();
 }

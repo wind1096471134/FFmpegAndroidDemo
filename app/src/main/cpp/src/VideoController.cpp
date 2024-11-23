@@ -11,9 +11,9 @@ extern "C" {
 }
 
 #define LOG_TAG "VideoController"
-#define FFMPEG_LOG true
+#define FFMPEG_LOG false
 
-int VideoController::encodeVideoWithImg(const char *imgInputPath, const char *videoOutputPath) {
+int VideoController::encodeImgToVideo(const char *imgInputPath, const char *videoOutputPath) {
     VideoDecoder videoDecoder;
     int decodeFrameNum = 0;
     int ret = 0;
@@ -22,14 +22,12 @@ int VideoController::encodeVideoWithImg(const char *imgInputPath, const char *vi
         log(LOG_TAG, "decode frame", data.frameIndex, data.mediaType);
         if(decodeFrameNum == 1) {
             VideoEncoder videoEncoder;
-            ret = videoEncoder.encodeImgToVideo(data.avFrame, videoOutputPath);
+            VideoEncodeParam videoEncodeParam = {data.avFrame->width, data.avFrame->height, 25, 3000000, data.avFrame->format};
+            ret = videoEncoder_encodeImgToVideo(data.avFrame, videoOutputPath, videoEncodeParam, 5);
             log(LOG_TAG, "encodeImgToVideo", ret);
-            videoEncoder.destroy();
         }
     };
-    ret = videoDecoder.decodeFile(imgInputPath, decodeFrameCallback);
-    videoDecoder.destroy();
-    return ret;
+    return videoDecoder.decodeFile(imgInputPath, decodeFrameCallback);
 }
 
 void av_log_default_callback(void *avcl, int level, const char *fmt,
@@ -40,6 +38,12 @@ void av_log_default_callback(void *avcl, int level, const char *fmt,
 VideoController::VideoController() {
     if(FFMPEG_LOG) {
         av_log_set_callback(av_log_default_callback);
+    }
+}
+
+VideoController::~VideoController() {
+    if(FFMPEG_LOG) {
+        av_log_set_callback(nullptr);
     }
 }
 

@@ -11,7 +11,7 @@ Java_com_example_ffmpegdemo_MainActivity_ffmpegEncodeImgToVideo(JNIEnv *env, job
     const char* inputPath = env->GetStringUTFChars(input_path, nullptr);
     const char* outputPath = env->GetStringUTFChars(output_path, nullptr);
     VideoController videoController;
-    int ret = videoController.encodeVideoWithImg(inputPath, outputPath);
+    int ret = videoController.encodeImgToVideo(inputPath, outputPath);
     env->ReleaseStringUTFChars(input_path, inputPath);
     env->ReleaseStringUTFChars(output_path, outputPath);
     return ret == 0;
