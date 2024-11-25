@@ -5,33 +5,12 @@
 #ifndef FFMPEGDEMO_VIDEODECODER_H
 #define FFMPEGDEMO_VIDEODECODER_H
 
-extern "C"{
-#include "libavcodec/codec.h"
-#include "libavcodec/avcodec.h"
-#include "libavformat/avio.h"
-#include "libavformat/avformat.h"
-}
-#include "functional"
+#include "BaseDecoder.h"
 
-struct DecodeFrameData {
-    int frameIndex; //[0,n]
-    int mediaType; //1:Video; 2:Audio
-    AVFrame *avFrame;
-};
-using DecodeVideoCallback = std::function<void(DecodeFrameData &data)>;
-
-class VideoDecoder{
-private:
-    AVFormatContext *avFormatContext = nullptr;
-    AVCodecContext  *avCodecContext = nullptr;
-    const AVCodec *avCodec = nullptr;
-
-    int decodeVideo(const char *filePath, DecodeVideoCallback &decodeCallback);
-    void freeResource();
+class VideoDecoder: public BaseDecoder {
 public:
-    VideoDecoder();
-    int decodeFile(const char *filePath, DecodeVideoCallback &decodeCallback);
-    ~VideoDecoder();
+    VideoDecoder(): BaseDecoder(AVMEDIA_TYPE_VIDEO) {}
+    ~VideoDecoder() = default;
 };
 
 #endif //FFMPEGDEMO_VIDEODECODER_H

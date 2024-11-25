@@ -17,7 +17,6 @@ struct VideoEncodeParam {
     int h;
     int fps;
     int bitRate;
-    int inputDataFormat;
 };
 
 class VideoEncoder {
@@ -34,7 +33,7 @@ public:
     //编码开始，输入数据前必须调用一次
     int encodeStart(const char *outputFile, VideoEncodeParam &param);
     //输入每一帧数据
-    int encodeFrame(const AVFrame *imgFrame);
+    int encodeFrame(const AVFrame *avFrame);
     //编码结束，数据输入结束必须调用一次
     int encodeEnd();
     ~VideoEncoder();

@@ -1,10 +1,13 @@
 //
-// Created by 10964 on 2024/11/7.
+// Created by allan on 2024/11/7.
 //
 
 #include "VideoEncoder.h"
 #include "Util.h"
 #include "map"
+extern "C" {
+#include "libswscale/swscale.h"
+}
 
 #define LOG_TAG "VideoEncoder"
 
@@ -44,7 +47,7 @@ int VideoEncoder::encodeStart(const char *outputFile, VideoEncodeParam &param) {
     avCodecContext->gop_size = 10;
     avCodecContext->time_base = AVRational {1, param.fps};
     avCodecContext->framerate = AVRational {param.fps, 1};
-    avCodecContext->pix_fmt = static_cast<AVPixelFormat>(param.inputDataFormat);
+    avCodecContext->pix_fmt = AV_PIX_FMT_YUV420P;
     ret = avcodec_open2(avCodecContext, codec, nullptr);
     if(ret != 0) {
         log(LOG_TAG, "codec open fail", ret);
@@ -79,33 +82,35 @@ int VideoEncoder::encodeStart(const char *outputFile, VideoEncodeParam &param) {
     return 0;
 }
 
-int VideoEncoder::encodeFrame(const AVFrame *imgFrame) {
-    log(LOG_TAG, "write frame");
-    //write frame
-    AVPacket *avPacket = av_packet_alloc();
-    av_init_packet(avPacket);
-    avPacket->data = nullptr;
-    avPacket->size = 0;
+int VideoEncoder::encodeFrame(const AVFrame *avFrame) {
+    //transform data to yuv420p
+    SwsContext *swsContext = sws_getContext(
+            avFrame->width, avFrame->height, static_cast<AVPixelFormat>(avFrame->format),
+            avFrame->width, avFrame->height, AV_PIX_FMT_YUV420P,
+            0, nullptr, nullptr, nullptr);
+    AVFrame *yuvFrame = av_frame_alloc();
+    yuvFrame->width = avFrame->width;
+    yuvFrame->height = avFrame->height;
+    yuvFrame->format = AV_PIX_FMT_YUV420P;
+    av_frame_get_buffer(yuvFrame, 0);
+    int ret = sws_scale_frame(swsContext, yuvFrame, avFrame);
+    //log(LOG_TAG, "sws_scale_frame", ret, avFrame->format);
+    if(ret < 0) {
+        log(LOG_TAG, "sws_scale_frame fail", ret, avFrame->format);
+        av_frame_free(&yuvFrame);
+        return -1;
+    }
+    //set dts and pts
+    yuvFrame->pkt_dts = frameCount;
+    yuvFrame->pts = yuvFrame->pkt_dts;
 
-    AVFrame *avFrame = av_frame_alloc();
-    avFrame->width = avCodecContext->width;
-    avFrame->height = avCodecContext->height;
-    avFrame->format = imgFrame->format;
-    av_frame_get_buffer(avFrame, 0);
-
-    //write data and pts/dts
-    avFrame->data[0] = imgFrame->data[0];
-    avFrame->data[1] = imgFrame->data[1];
-    avFrame->data[2] = imgFrame->data[2];
-    avFrame->pkt_dts = frameCount;
-    avFrame->pts = avFrame->pkt_dts;
-
-    int ret = avcodec_send_frame(avCodecContext, avFrame);
+    ret = avcodec_send_frame(avCodecContext, yuvFrame);
     if(ret < 0) {
         log(LOG_TAG, "write frame fail ", ret);
         return -1;
     }
     while(ret >= 0) {
+        AVPacket *avPacket = av_packet_alloc();
         ret = avcodec_receive_packet(avCodecContext, avPacket);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
             break;
@@ -118,7 +123,7 @@ int VideoEncoder::encodeFrame(const AVFrame *imgFrame) {
         }
         av_packet_unref(avPacket);
     }
-    av_frame_free(&avFrame);
+    av_frame_free(&yuvFrame);
     frameCount++;
 
     return 0;
