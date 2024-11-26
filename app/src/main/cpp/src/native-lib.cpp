@@ -10,8 +10,7 @@ Java_com_example_ffmpegdemo_MainActivity_ffmpegEncodeImgToVideo(JNIEnv *env, job
                                                                 jstring output_path) {
     const char* inputPath = env->GetStringUTFChars(img_path, nullptr);
     const char* outputPath = env->GetStringUTFChars(output_path, nullptr);
-    MediaController videoController;
-    int ret = videoController.encodeImgToVideo(inputPath, outputPath);
+    int ret = encodeImgToVideo(std::string(inputPath), std::string(outputPath));
     env->ReleaseStringUTFChars(img_path, inputPath);
     env->ReleaseStringUTFChars(output_path, outputPath);
     return ret == 0;
@@ -26,8 +25,9 @@ Java_com_example_ffmpegdemo_MainActivity_ffmpegEncodeImgAndAudioToVideo(JNIEnv *
     const char* imgPath = env->GetStringUTFChars(img_input_path, nullptr);
     const char* audioPath = env->GetStringUTFChars(audio_input_path, nullptr);
     const char* outputPath = env->GetStringUTFChars(output_path, nullptr);
-    MediaController videoController;
-    int ret = videoController.encodeImgAndAudioToVideo(imgPath, audioPath, outputPath);
+    int ret = encodeImgAndAudioToVideo(std::string(imgPath),
+                                       std::string(audioPath),
+                                       std::string(outputPath));
     env->ReleaseStringUTFChars(img_input_path, imgPath);
     env->ReleaseStringUTFChars(output_path, outputPath);
     env->ReleaseStringUTFChars(audio_input_path, audioPath);

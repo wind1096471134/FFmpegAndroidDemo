@@ -11,6 +11,7 @@ extern "C" {
 #include "libavcodec/codec.h"
 #include "libavformat/avformat.h"
 }
+#include "string"
 
 struct VideoEncodeParam {
     int w;
@@ -31,7 +32,7 @@ private:
 public:
     VideoEncoder();
     //编码开始，输入数据前必须调用一次
-    int encodeStart(const char *outputFile, VideoEncodeParam &param);
+    int encodeStart(const std::string &outputFile, VideoEncodeParam &param);
     //输入每一帧数据
     int encodeFrame(const AVFrame *avFrame);
     //编码结束，数据输入结束必须调用一次
@@ -40,6 +41,6 @@ public:
 };
 
 //tools method
-int videoEncoder_encodeImgToVideo(const AVFrame *avFrame, const char *outputFile, VideoEncodeParam &param, int durationSecond);
+int videoEncoder_encodeImgToVideo(const AVFrame *avFrame, const std::string &outputFile, VideoEncodeParam &param, int durationSecond);
 
 #endif //FFMPEGDEMO_VIDEOENCODER_H

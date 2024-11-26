@@ -16,6 +16,6 @@ void log(const char *tag, const char *msg, int ret1, int ret2) {
     __android_log_print(ANDROID_LOG_INFO, tag, "%s,%d,%d", msg, ret1, ret2);
 }
 
-void log(const char *tag, const char *fmtMsg, va_list vl) {
-    __android_log_print(ANDROID_LOG_INFO, tag, fmtMsg, vl);
+void log(const char *tag, const char *msg, const char *ret) {
+    __android_log_print(ANDROID_LOG_INFO, tag, "%s,%s", msg, ret);
 }

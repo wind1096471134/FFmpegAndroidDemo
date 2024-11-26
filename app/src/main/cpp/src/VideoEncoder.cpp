@@ -5,6 +5,7 @@
 #include "VideoEncoder.h"
 #include "Util.h"
 #include "map"
+#include "Error.h"
 extern "C" {
 #include "libswscale/swscale.h"
 }
@@ -18,13 +19,13 @@ VideoEncoder::~VideoEncoder() {
     freeResource();
 }
 
-int VideoEncoder::encodeStart(const char *outputFile, VideoEncodeParam &param) {
+int VideoEncoder::encodeStart(const std::string &outputFile, VideoEncodeParam &param) {
     //init outputFormat
-    int ret = avformat_alloc_output_context2(&outputFormatContext, nullptr, nullptr, outputFile);
+    int ret = avformat_alloc_output_context2(&outputFormatContext, nullptr, nullptr, outputFile.data());
     log(LOG_TAG, "initOutput", ret);
     if(ret < 0) {
         freeResource();
-        return ret;
+        return FFMPEG_API_FAIL;
     }
 
     //init encoder
@@ -32,13 +33,13 @@ int VideoEncoder::encodeStart(const char *outputFile, VideoEncodeParam &param) {
     if(codec == nullptr) {
         log(LOG_TAG, "find no codec", outputFormatContext->oformat->video_codec);
         freeResource();
-        return -1;
+        return FFMPEG_API_FAIL;
     }
     avCodecContext = avcodec_alloc_context3(codec);
     if(avCodecContext == nullptr) {
         log(LOG_TAG, "alloc avCodecContext fail");
         freeResource();
-        return -1;
+        return FFMPEG_API_FAIL;
     }
     avCodecContext->profile = FF_PROFILE_H264_HIGH;
     avCodecContext->bit_rate = param.bitRate;
@@ -52,7 +53,7 @@ int VideoEncoder::encodeStart(const char *outputFile, VideoEncodeParam &param) {
     if(ret != 0) {
         log(LOG_TAG, "codec open fail", ret);
         freeResource();
-        return ret;
+        return FFMPEG_API_FAIL;
     }
 
     //init output stream
@@ -60,26 +61,26 @@ int VideoEncoder::encodeStart(const char *outputFile, VideoEncodeParam &param) {
     if(avStream == nullptr) {
         log(LOG_TAG, "avformat_new_stream fail");
         freeResource();
-        return ret;
+        return FFMPEG_API_FAIL;
     }
     avStream->time_base = avCodecContext->time_base;
-    if((ret = avio_open(&outputFormatContext->pb, outputFile, AVIO_FLAG_WRITE)) < 0) {
+    if((ret = avio_open(&outputFormatContext->pb, outputFile.data(), AVIO_FLAG_WRITE)) < 0) {
         freeResource();
-        return ret;
+        return FFMPEG_API_FAIL;
     }
     if((ret = avcodec_parameters_from_context(avStream->codecpar, avCodecContext)) < 0) {
         freeResource();
-        return ret;
+        return FFMPEG_API_FAIL;
     }
     log(LOG_TAG, "write header");
     //write header
     if(avformat_write_header(outputFormatContext, nullptr) < 0) {
         freeResource();
-        return ret;
+        return FFMPEG_API_FAIL;
     }
 
     frameCount = 0;
-    return 0;
+    return SUC;
 }
 
 int VideoEncoder::encodeFrame(const AVFrame *avFrame) {
@@ -98,7 +99,7 @@ int VideoEncoder::encodeFrame(const AVFrame *avFrame) {
     if(ret < 0) {
         log(LOG_TAG, "sws_scale_frame fail", ret, avFrame->format);
         av_frame_free(&yuvFrame);
-        return -1;
+        return FFMPEG_API_FAIL;
     }
     //set dts and pts
     yuvFrame->pkt_dts = frameCount;
@@ -126,7 +127,7 @@ int VideoEncoder::encodeFrame(const AVFrame *avFrame) {
     av_frame_free(&yuvFrame);
     frameCount++;
 
-    return 0;
+    return SUC;
 }
 
 int VideoEncoder::encodeEnd() {
@@ -153,7 +154,7 @@ void VideoEncoder::freeResource() {
     frameCount = 0;
 }
 
-int videoEncoder_encodeImgToVideo(const AVFrame *avFrame, const char *outputFile, VideoEncodeParam &param, int durationSecond) {
+int videoEncoder_encodeImgToVideo(const AVFrame *avFrame, const std::string &outputFile, VideoEncodeParam &param, int durationSecond) {
     VideoEncoder videoEncoder;
     int ret = videoEncoder.encodeStart(outputFile, param);
     if(ret >= 0) {

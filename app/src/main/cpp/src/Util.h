@@ -9,6 +9,6 @@
 
 bool strEndWith(const char *originStr, const char * suffix);
 void log(const char *tag, const char *msg, int ret1 = 0, int re2 = 0);
-void log(const char *tag, const char *fmtMsg, va_list vl);
+void log(const char *tag, const char *msg, const char *ret);
 
 #endif //FFMPEGDEMO_UTIL_H
