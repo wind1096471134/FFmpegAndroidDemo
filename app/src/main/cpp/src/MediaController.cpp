@@ -19,37 +19,54 @@ extern "C" {
 #define FFMPEG_LOG false
 
 void MediaController::onDecodeFrameCallback(DecodeFrameData &data) {
-    log(LOG_TAG, "decode frame", data.avFrame->format, data.mediaType);
-    //VideoEncoder videoEncoder;
-    VideoEncodeParam videoEncodeParam = {data.avFrame->width, data.avFrame->height, 25, 3000000};
-    int ret = videoEncoder_encodeImgToVideo(data.avFrame, videoOutputPath, videoEncodeParam, 5);
-    log(LOG_TAG, "encodeImgToVideo", ret);
     if(data.isFinish) {
-        videoOutputPath.clear();
+        log(LOG_TAG, "decode frame finish", data.mediaType);
+        if(data.mediaType == AVMEDIA_TYPE_VIDEO) {
+            videoDecodeEnd = true;
+        } else if (data.mediaType == AVMEDIA_TYPE_AUDIO) {
+            audioDecodeEnd = true;
+        }
+    } else {
+        if(data.mediaType == AVMEDIA_TYPE_VIDEO) {
+            for(int simulatePts = 0; simulatePts < repeatVideoFrameNum; simulatePts++) {
+                videoEncoder->encodeFrame({data.avFrame, data.mediaType});
+            }
+            if(videoEncoder->getEncodeVideoDuration() >= encodeDuration) {
+                videoDecodeEnd = true;
+                videoDecoder->stopDecode();
+            }
+        } else {
+            videoEncoder->encodeFrame({data.avFrame, data.mediaType});
+            if(videoEncoder->getEncodeAudioDuration() >= encodeDuration) {
+                audioDecodeEnd = true;
+                audioDecoder->stopDecode();
+            }
+        }
+    }
+    if(videoDecodeEnd && audioDecodeEnd) {
+        videoEncoder->encodeEnd();
+        repeatVideoFrameNum = 1;
+        videoDecodeEnd = false;
+        audioDecodeEnd = false;
     }
 }
 
 int MediaController::encodeImgToVideo(const std::string &imgInputPath, const std::string &videoOutputPath) {
-    if(videoDecoder == nullptr) {
-        videoDecoder = new VideoDecoder();
-    }
-    this->videoOutputPath = videoOutputPath;
-    int ret = videoDecoder->decodeFile(imgInputPath, mediaDecodeFrameCallback);
-
-    return ret;
+    repeatVideoFrameNum = encodeFps * encodeDuration;//fps * duration
+    videoEncoder->setEncodeCallback(shared_from_this());
+    videoEncoder->encodeStart(videoOutputPath, {true, 3000000, 512, 512, DEFAULT_VIDEO_FPS}, {false});
+    videoDecoder->decodeFile(imgInputPath, mediaDecodeFrameCallback);
+    return SUC;
 }
 
 int MediaController::encodeImgAndAudioToVideo(const std::string &imgInputPath, const std::string &audioInputPath,
                                               const std::string &videoOutputPath) {
-    if(audioDecoder == nullptr) {
-        audioDecoder = new AudioDecoder();
-    }
-    this->videoOutputPath = videoOutputPath;
-    std::function<void(DecodeFrameData &data)> audioDecodeFrameCallback = [&](DecodeFrameData &data) {
-        log(LOG_TAG, "decode frame", data.avFrame->format, data.frameIndex);
-    };
-    int ret = audioDecoder->decodeFile(audioInputPath, audioDecodeFrameCallback);
-    return ret;
+    repeatVideoFrameNum = encodeFps * encodeDuration;//fps * duration
+    videoEncoder->setEncodeCallback(shared_from_this());
+    videoEncoder->encodeStart(videoOutputPath, {true, 3000000, 512, 512, DEFAULT_VIDEO_FPS}, {true, 400000, 44100, AV_CHANNEL_LAYOUT_STEREO});
+    audioDecoder->decodeFile(audioInputPath, mediaDecodeFrameCallback);
+    videoDecoder->decodeFile(imgInputPath, mediaDecodeFrameCallback);
+    return SUC;
 }
 
 void av_log_default_callback(void *avcl, int level, const char *fmt,
@@ -61,50 +78,31 @@ MediaController::MediaController() {
     if(FFMPEG_LOG) {
         av_log_set_callback(av_log_default_callback);
     }
+    videoDecoder = std::make_shared<VideoDecoder>();
+    audioDecoder = std::make_shared<AudioDecoder>();
+    videoEncoder = std::make_shared<VideoEncoder>();
+
 }
 
 MediaController::~MediaController() {
     if(FFMPEG_LOG) {
         av_log_set_callback(nullptr);
     }
-    if(videoDecoder != nullptr) {
-        delete videoDecoder;
-    }
-    if(audioDecoder != nullptr) {
-        delete audioDecoder;
-    }
-    if(videoEncoder == nullptr) {
-        delete videoDecoder;
+}
+
+void MediaController::onEncodeStart() {
+    if(outsideEncodeCallback != nullptr) {
+        outsideEncodeCallback->onEncodeStart();
     }
 }
 
-MediaController *mediaController = nullptr;
-bool isProcessing = false;
-std::mutex mutex;
-
-int encodeImgToVideo(const std::string &imgInputPath, const std::string &videoOutputPath) {
-    std::lock_guard<std::mutex> lock(mutex);
-    if(isProcessing) {
-        return PROCESSING;
+void MediaController::onEncodeFinish(int ret, const std::string &encodeFile) {
+    log(LOG_TAG, "onEncodeFinish", encodeFile.data(), ret);
+    if(outsideEncodeCallback != nullptr) {
+        outsideEncodeCallback->onEncodeFinish(ret, encodeFile);
     }
-    if(mediaController == nullptr) {
-        mediaController = new MediaController();
-    }
-    mediaController->encodeImgToVideo(imgInputPath, videoOutputPath);
-    isProcessing = true;
-    return SUC;
 }
 
-int encodeImgAndAudioToVideo(const std::string &imgInputPath, const std::string &audioInputPath,
-                             const std::string &videoOutputPath) {
-    std::lock_guard<std::mutex> lock(mutex);
-    if(isProcessing) {
-        return PROCESSING;
-    }
-    if(mediaController == nullptr) {
-        mediaController = new MediaController();
-    }
-    mediaController->encodeImgAndAudioToVideo(imgInputPath, audioInputPath, videoOutputPath);
-    isProcessing = true;
-    return SUC;
+void MediaController::setEncodeCallback(std::shared_ptr<IEncodeCallback> callback) {
+    outsideEncodeCallback = callback;
 }

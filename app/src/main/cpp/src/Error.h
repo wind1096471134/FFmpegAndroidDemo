@@ -9,6 +9,7 @@ enum ERROR_CODE {
     SUC = 0,
     PROCESSING = -1,
     FFMPEG_API_FAIL = -2,
+    ENCODE_ALREADY_FINISH = -3,
 };
 
 #endif //FFMPEGDEMO_ERROR_H

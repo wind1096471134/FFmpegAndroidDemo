@@ -28,12 +28,13 @@ protected:
     AVCodecContext  *avCodecContext = nullptr;
     const AVCodec *avCodec = nullptr;
     const AVMediaType mediaType;
-    std::string inputFilePath;
+    std::atomic<bool> decoding;
 
     void freeResource();
 public:
     BaseDecoder(AVMediaType avMediaType): mediaType(avMediaType) {};
-    int decodeFile(const std::string &filePath, DecodeVideoCallback &decodeCallback);
+    int decodeFile(const std::string &inputFilePath, DecodeVideoCallback &decodeCallback);
+    void stopDecode();
     ~BaseDecoder();
 };
 

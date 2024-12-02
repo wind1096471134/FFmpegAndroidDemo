@@ -74,11 +74,16 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+    private val nativeMediaCallback = object : NativeMediaCallback {
+        override fun onEncodeFinish(ret: Int, filePath: String?) {
+            resultInUiThread(if(ret == 0) "编码成功，文件保存到：$filePath" else "操作失败")
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         initView()
-
+        ffmpegSetNativeCallback(nativeMediaCallback)
         threadPoolExecutor = Executors.newFixedThreadPool(4)
     }
 
@@ -101,7 +106,6 @@ class MainActivity : AppCompatActivity() {
             saveAssetFileToLocalIfNeed("img.PNG", imgFile)
             val outputFile = baseContext.filesDir.absolutePath + "/imgToVideo.mp4"
             val ret = ffmpegEncodeImgToVideo(imgFile, outputFile)
-            resultInUiThread(if(ret) "编码成功，文件保存到：$outputFile" else "操作失败")
         }
     }
 
@@ -114,7 +118,6 @@ class MainActivity : AppCompatActivity() {
             saveAssetFileToLocalIfNeed("audio.aac", audioFile)
             val outputFile = baseContext.filesDir.absolutePath + "/imgAndAudioToVideo.mp4"
             val ret = ffmpegEncodeImgAndAudioToVideo(imgFile, audioFile, outputFile)
-            resultInUiThread(if(ret) "编码成功，文件保存到：$outputFile" else "操作失败")
         }
     }
 
@@ -147,6 +150,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    external fun ffmpegSetNativeCallback(callback: NativeMediaCallback)
+
     external fun ffmpegEncodeImgToVideo(imgInputPath: String, outputPath: String): Boolean
 
     external fun ffmpegEncodeImgAndAudioToVideo(imgInputPath: String, audioInputPath: String?, outputPath: String): Boolean
@@ -157,5 +162,9 @@ class MainActivity : AppCompatActivity() {
             System.loadLibrary("ffmpegdemo")
             System.loadLibrary("ffmpeg")
         }
+    }
+
+    interface NativeMediaCallback {
+        fun onEncodeFinish(ret: Int, filePath: String?)
     }
 }

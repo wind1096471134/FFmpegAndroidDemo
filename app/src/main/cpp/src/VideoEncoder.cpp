@@ -6,8 +6,10 @@
 #include "Util.h"
 #include "map"
 #include "Error.h"
+#include "thread"
 extern "C" {
 #include "libswscale/swscale.h"
+#include "libswresample/swresample.h"
 }
 
 #define LOG_TAG "VideoEncoder"
@@ -19,7 +21,31 @@ VideoEncoder::~VideoEncoder() {
     freeResource();
 }
 
-int VideoEncoder::encodeStart(const std::string &outputFile, VideoEncodeParam &param) {
+int VideoEncoder::encodeStart(const std::string &outputFile, const VideoEncodeParam &videoEncodeParam, const AudioEncodeParam &audioEncodeParam) {
+    decodeRunning.store(true);
+    this->videoEncodeParam = videoEncodeParam;
+    this->audioEncodeParam = audioEncodeParam;
+    std::thread thread([&, outputFile]() {
+        if(encodeCallback != nullptr) {
+            encodeCallback->onEncodeStart();
+        }
+
+        log(LOG_TAG, "encodeStart", outputFile.data());
+        int ret = encodeThreadHandlerLoop(outputFile, this->videoEncodeParam, this->audioEncodeParam);
+        log(LOG_TAG, "encodeEnd", ret);
+
+        if(encodeCallback != nullptr) {
+            encodeCallback->onEncodeFinish(ret, outputFile);
+        }
+        freeResource();
+    });
+    thread.detach();
+    return SUC;
+}
+
+int VideoEncoder::encodeThreadHandlerLoop(const std::string &outputFile,
+                                          const VideoEncodeParam &videoEncodeParam,
+                                          const AudioEncodeParam &audioEncodeParam) {
     //init outputFormat
     int ret = avformat_alloc_output_context2(&outputFormatContext, nullptr, nullptr, outputFile.data());
     log(LOG_TAG, "initOutput", ret);
@@ -28,87 +54,221 @@ int VideoEncoder::encodeStart(const std::string &outputFile, VideoEncodeParam &p
         return FFMPEG_API_FAIL;
     }
 
-    //init encoder
-    codec = avcodec_find_encoder(outputFormatContext->oformat->video_codec);
-    if(codec == nullptr) {
-        log(LOG_TAG, "find no codec", outputFormatContext->oformat->video_codec);
-        freeResource();
-        return FFMPEG_API_FAIL;
-    }
-    avCodecContext = avcodec_alloc_context3(codec);
-    if(avCodecContext == nullptr) {
-        log(LOG_TAG, "alloc avCodecContext fail");
-        freeResource();
-        return FFMPEG_API_FAIL;
-    }
-    avCodecContext->profile = FF_PROFILE_H264_HIGH;
-    avCodecContext->bit_rate = param.bitRate;
-    avCodecContext->width = param.w;
-    avCodecContext->height = param.h;
-    avCodecContext->gop_size = 10;
-    avCodecContext->time_base = AVRational {1, param.fps};
-    avCodecContext->framerate = AVRational {param.fps, 1};
-    avCodecContext->pix_fmt = AV_PIX_FMT_YUV420P;
-    ret = avcodec_open2(avCodecContext, codec, nullptr);
-    if(ret != 0) {
-        log(LOG_TAG, "codec open fail", ret);
-        freeResource();
-        return FFMPEG_API_FAIL;
-    }
+    //------- init videoCodec start ------
+    if(videoEncodeParam.encode) {
+        videoCodec = avcodec_find_encoder(outputFormatContext->oformat->video_codec);
+        if(videoCodec == nullptr) {
+            log(LOG_TAG, "find no videoCodec", outputFormatContext->oformat->video_codec);
+            freeResource();
+            return FFMPEG_API_FAIL;
+        }
+        videoCodecContext = avcodec_alloc_context3(videoCodec);
+        if(videoCodecContext == nullptr) {
+            log(LOG_TAG, "alloc videoCodecContext fail");
+            freeResource();
+            return FFMPEG_API_FAIL;
+        }
+        videoCodecContext->profile = FF_PROFILE_H264_HIGH;
+        videoCodecContext->codec_type = AVMEDIA_TYPE_VIDEO;
+        videoCodecContext->bit_rate = videoEncodeParam.bitRate;
+        videoCodecContext->width = videoEncodeParam.w;
+        videoCodecContext->height = videoEncodeParam.h;
+        videoCodecContext->gop_size = 10;
+        videoCodecContext->time_base = AVRational {1, videoEncodeParam.fps};
+        videoCodecContext->framerate = AVRational {videoEncodeParam.fps, 1};
+        videoCodecContext->pix_fmt = AV_PIX_FMT_YUV420P;
+        ret = avcodec_open2(videoCodecContext, videoCodec, nullptr);
+        if(ret != 0) {
+            log(LOG_TAG, "videoCodec open fail", ret);
+            freeResource();
+            return FFMPEG_API_FAIL;
+        }
 
-    //init output stream
-    avStream = avformat_new_stream(outputFormatContext, codec);
-    if(avStream == nullptr) {
-        log(LOG_TAG, "avformat_new_stream fail");
-        freeResource();
-        return FFMPEG_API_FAIL;
+        //init output stream
+        videoStream = avformat_new_stream(outputFormatContext, videoCodec);
+        if(videoStream == nullptr) {
+            log(LOG_TAG, "avformat_new_stream fail");
+            freeResource();
+            return FFMPEG_API_FAIL;
+        }
+        videoStream->time_base = videoCodecContext->time_base;
+        if((ret = avcodec_parameters_from_context(videoStream->codecpar, videoCodecContext)) < 0) {
+            freeResource();
+            return FFMPEG_API_FAIL;
+        }
     }
-    avStream->time_base = avCodecContext->time_base;
+    //------- init videoCodec end ------
+
+    //------- init audioCodec start ------
+    if(audioEncodeParam.encode) {
+        audioCodec = avcodec_find_encoder(outputFormatContext->oformat->audio_codec);
+        if(audioCodec == nullptr) {
+            log(LOG_TAG, "find no audioCodec", outputFormatContext->oformat->audio_codec);
+            freeResource();
+            return FFMPEG_API_FAIL;
+        }
+        audioCodecContext = avcodec_alloc_context3(audioCodec);
+        if(audioCodecContext == nullptr) {
+            log(LOG_TAG, "alloc audioCodecContext fail");
+            freeResource();
+            return FFMPEG_API_FAIL;
+        }
+        audioCodecContext->codec_type = AVMEDIA_TYPE_AUDIO;
+        audioCodecContext->sample_rate = audioEncodeParam.sampleRate;
+        audioCodecContext->sample_fmt = AV_SAMPLE_FMT_FLTP;
+        audioCodecContext->bit_rate = audioEncodeParam.bitRate;
+        audioCodecContext->ch_layout = audioEncodeParam.channelLayout;
+        audioCodecContext->time_base = AVRational {1, audioEncodeParam.sampleRate};
+        ret = avcodec_open2(audioCodecContext, audioCodec, nullptr);
+        if(ret != 0) {
+            log(LOG_TAG, "videoCodec open fail", ret);
+            freeResource();
+            return FFMPEG_API_FAIL;
+        }
+
+        //init output stream
+        audioStream = avformat_new_stream(outputFormatContext, audioCodec);
+        if(audioStream == nullptr) {
+            log(LOG_TAG, "avformat_new_stream fail");
+            freeResource();
+            return FFMPEG_API_FAIL;
+        }
+        audioStream->time_base = audioCodecContext->time_base;
+        if((ret = avcodec_parameters_from_context(audioStream->codecpar, audioCodecContext)) < 0) {
+            freeResource();
+            return FFMPEG_API_FAIL;
+        }
+    }
+    //------- init audioCodec end ------
+
+    //write header
+    log(LOG_TAG, "write header");
     if((ret = avio_open(&outputFormatContext->pb, outputFile.data(), AVIO_FLAG_WRITE)) < 0) {
         freeResource();
         return FFMPEG_API_FAIL;
     }
-    if((ret = avcodec_parameters_from_context(avStream->codecpar, avCodecContext)) < 0) {
-        freeResource();
-        return FFMPEG_API_FAIL;
-    }
-    log(LOG_TAG, "write header");
-    //write header
-    if(avformat_write_header(outputFormatContext, nullptr) < 0) {
+    if((ret = avformat_write_header(outputFormatContext, nullptr)) < 0) {
+        log(LOG_TAG, "write header fail", ret);
         freeResource();
         return FFMPEG_API_FAIL;
     }
 
-    frameCount = 0;
+    //loop and encode frames.
+    while (decodeRunning || !queue.isEmpty()) {
+        EncodeFrame encodeFrame = queue.dequeue();
+        ret = encodeFrameInternal(encodeFrame);
+        av_frame_free(&encodeFrame.avFrame);
+        if(ret != SUC) {
+            freeResource();
+            return ret;
+        }
+    }
+    //write tail and finish.
+    ret = av_write_trailer(outputFormatContext);
+    if(ret != 0) {
+        freeResource();
+        return FFMPEG_API_FAIL;
+    }
     return SUC;
 }
 
-int VideoEncoder::encodeFrame(const AVFrame *avFrame) {
-    //transform data to yuv420p
-    SwsContext *swsContext = sws_getContext(
-            avFrame->width, avFrame->height, static_cast<AVPixelFormat>(avFrame->format),
-            avFrame->width, avFrame->height, AV_PIX_FMT_YUV420P,
-            0, nullptr, nullptr, nullptr);
-    AVFrame *yuvFrame = av_frame_alloc();
-    yuvFrame->width = avFrame->width;
-    yuvFrame->height = avFrame->height;
-    yuvFrame->format = AV_PIX_FMT_YUV420P;
-    av_frame_get_buffer(yuvFrame, 0);
-    int ret = sws_scale_frame(swsContext, yuvFrame, avFrame);
-    //log(LOG_TAG, "sws_scale_frame", ret, avFrame->format);
-    if(ret < 0) {
-        log(LOG_TAG, "sws_scale_frame fail", ret, avFrame->format);
-        av_frame_free(&yuvFrame);
+int VideoEncoder::encodeFrame(const EncodeFrame &encodeFrame) {
+    if(!decodeRunning.load()) {
+        return ENCODE_ALREADY_FINISH;
+    }
+    AVFrame *copyFrame = av_frame_clone(encodeFrame.avFrame);
+    if(copyFrame == nullptr) {
         return FFMPEG_API_FAIL;
     }
-    //set dts and pts
-    yuvFrame->pkt_dts = frameCount;
-    yuvFrame->pts = yuvFrame->pkt_dts;
+    queue.enqueue({copyFrame, encodeFrame.mediaType});
+    if(encodeFrame.mediaType == AVMEDIA_TYPE_VIDEO) {
+        videoFrameInputNum++;
+    } else if (encodeFrame.mediaType == AVMEDIA_TYPE_AUDIO) {
+        audioFrameInputSampleNum += copyFrame->nb_samples;
+    }
+    return SUC;
+}
 
-    ret = avcodec_send_frame(avCodecContext, yuvFrame);
+int VideoEncoder::encodeFrameInternal(const EncodeFrame &encodeFrame) {
+    AVFrame *avFrame = encodeFrame.avFrame;
+    AVFrame *dstFrame = nullptr;
+    AVCodecContext *avCodecContext = nullptr;
+    AVStream *avStream = nullptr;
+    if(encodeFrame.mediaType == AVMEDIA_TYPE_VIDEO) {
+        //transform data to yuv420p
+        SwsContext *swsContext = sws_getContext(
+                avFrame->width, avFrame->height, static_cast<AVPixelFormat>(avFrame->format),
+                videoCodecContext->width, videoCodecContext->height, videoCodecContext->pix_fmt,
+                0, nullptr, nullptr, nullptr);
+        if(swsContext == nullptr) {
+            log(LOG_TAG, "sws_getContext fail");
+            return FFMPEG_API_FAIL;
+        }
+        AVFrame *yuvFrame = av_frame_alloc();
+        yuvFrame->width = videoCodecContext->width;
+        yuvFrame->height = videoCodecContext->height;
+        yuvFrame->format = videoCodecContext->pix_fmt;
+        yuvFrame->time_base = videoCodecContext->time_base;
+        av_frame_get_buffer(yuvFrame, 0);
+        int ret = sws_scale_frame(swsContext, yuvFrame, avFrame);
+        sws_freeContext(swsContext);
+        //log(LOG_TAG, "sws_scale_frame", ret, avFrame->format);
+        if(ret < 0) {
+            log(LOG_TAG, "sws_scale_frame fail", ret, avFrame->format);
+            av_frame_free(&yuvFrame);
+            return FFMPEG_API_FAIL;
+        }
+        yuvFrame->pkt_dts = videoFramePts;
+        yuvFrame->pts = yuvFrame->pkt_dts;
+        videoFramePts++;
+
+        dstFrame = yuvFrame;
+        avCodecContext = videoCodecContext;
+        avStream = videoStream;
+    } else if (encodeFrame.mediaType == AVMEDIA_TYPE_AUDIO) {
+        //log(LOG_TAG, "write audio frame", audioFramePts);
+        SwrContext *swrContext = nullptr;
+        int ret = swr_alloc_set_opts2(&swrContext, &audioCodecContext->ch_layout, audioCodecContext->sample_fmt, audioCodecContext->sample_rate,
+                                      &avFrame->ch_layout, static_cast<AVSampleFormat>(avFrame->format), avFrame->sample_rate, 0,
+                                      nullptr);
+        if(ret < 0 || swr_init(swrContext) < 0) {
+            log(LOG_TAG, "swr_alloc_set_opts2 fail", ret);
+            return FFMPEG_API_FAIL;
+        }
+        AVFrame *audioFrame = av_frame_alloc();
+        audioFrame->ch_layout = audioCodecContext->ch_layout;
+        audioFrame->format = audioCodecContext->sample_fmt;
+        audioFrame->sample_rate = audioCodecContext->sample_rate;
+        audioFrame->time_base = audioCodecContext->time_base;
+
+        av_frame_get_buffer(audioFrame, 0);
+        ret = swr_convert_frame(swrContext, audioFrame, avFrame);
+        swr_free(&swrContext);
+        if(ret < 0) {
+            char *errMsg = new char[20];
+            av_strerror(ret, errMsg, 20);
+            log(LOG_TAG, "swr_convert_frame fail", errMsg);
+            delete []errMsg;
+            av_frame_free(&audioFrame);
+            return FFMPEG_API_FAIL;
+        }
+        audioFrame->pts = audioFramePts;
+        audioFrame->pkt_dts = audioFramePts;
+        audioFramePts += audioFrame->nb_samples;
+
+        dstFrame = audioFrame;
+        avCodecContext = audioCodecContext;
+        avStream = audioStream;
+    }
+
+    if(dstFrame == nullptr || avCodecContext == nullptr || avStream == nullptr) {
+        return FFMPEG_API_FAIL;
+    }
+
+    int ret = avcodec_send_frame(avCodecContext, dstFrame);
     if(ret < 0) {
         log(LOG_TAG, "write frame fail ", ret);
-        return -1;
+        return FFMPEG_API_FAIL;
     }
     while(ret >= 0) {
         AVPacket *avPacket = av_packet_alloc();
@@ -119,29 +279,33 @@ int VideoEncoder::encodeFrame(const AVFrame *avFrame) {
         avPacket->stream_index = avStream->index;
         //transform pts
         av_packet_rescale_ts(avPacket, avCodecContext->time_base, avStream->time_base);
-        if(av_interleaved_write_frame(outputFormatContext, avPacket) != 0) {
-            log(LOG_TAG, "av_interleaved_write_frame fail", ret);
+        int ret1 = av_interleaved_write_frame(outputFormatContext, avPacket);
+        av_packet_free(&avPacket);
+        if(ret1 != 0) {
+            log(LOG_TAG, "av_interleaved_write_frame fail", ret1);
+            return FFMPEG_API_FAIL;
         }
-        av_packet_unref(avPacket);
     }
-    av_frame_free(&yuvFrame);
-    frameCount++;
+    av_frame_free(&dstFrame);
 
     return SUC;
 }
 
 int VideoEncoder::encodeEnd() {
-    //write tail
-    int ret = av_write_trailer(outputFormatContext);
-    freeResource();
-    return ret;
+    log(LOG_TAG, "call encodeEnd");
+    decodeRunning.store(false);
+    return SUC;
 }
 
 void VideoEncoder::freeResource() {
     //free res
-    codec = nullptr;
-    if(avCodecContext != nullptr) {
-        avcodec_free_context(&avCodecContext);
+    videoCodec = nullptr;
+    if(videoCodecContext != nullptr) {
+        avcodec_free_context(&videoCodecContext);
+    }
+    audioCodec = nullptr;
+    if(audioCodecContext != nullptr) {
+        avcodec_free_context(&audioCodecContext);
     }
     if(outputFormatContext != nullptr) {
         if(outputFormatContext->pb != nullptr) {
@@ -150,21 +314,30 @@ void VideoEncoder::freeResource() {
         avformat_free_context(outputFormatContext);
         outputFormatContext = nullptr;
     }
-    avStream = nullptr;
-    frameCount = 0;
+    while(!queue.isEmpty()) {
+        EncodeFrame frame = queue.dequeue();
+        av_frame_free(&frame.avFrame);
+    }
+    videoStream = nullptr;
+    audioStream = nullptr;
+    videoFramePts = 0;
+    audioFramePts = 0;
+    videoFrameInputNum = 0;
+    audioFrameInputSampleNum = 0;
+    videoEncodeParam.store({});
+    audioEncodeParam.store({});
 }
 
-int videoEncoder_encodeImgToVideo(const AVFrame *avFrame, const std::string &outputFile, VideoEncodeParam &param, int durationSecond) {
-    VideoEncoder videoEncoder;
-    int ret = videoEncoder.encodeStart(outputFile, param);
-    if(ret >= 0) {
-        int frameCount = durationSecond * param.fps;
-        for(int i = 0; i < frameCount; i++) { //写入每一帧数据
-            ret = videoEncoder.encodeFrame(avFrame);
-        }
-        if(ret >= 0) {
-            ret = videoEncoder.encodeEnd();
-        }
-    }
-    return ret;
+void VideoEncoder::setEncodeCallback(std::shared_ptr<IEncodeCallback> encodeCallback) {
+    this->encodeCallback = encodeCallback;
+}
+
+int VideoEncoder::getEncodeVideoDuration() {
+    int dur = videoFrameInputNum / videoEncodeParam.load().fps;
+    return dur;
+}
+
+int VideoEncoder::getEncodeAudioDuration() {
+    int dur = audioFrameInputSampleNum / audioEncodeParam.load().sampleRate;
+    return dur;
 }

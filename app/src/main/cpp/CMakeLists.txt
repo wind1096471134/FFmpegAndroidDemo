@@ -63,10 +63,11 @@ endif()
 # 获取当前目录下所有的 .cpp 文件
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 file(GLOB SRC_CPP_FILES ${SRC_DIR}/*.cpp)
-
+message("SRC_CPP_FILES:${SRC_CPP_FILES}")
 add_library(${CMAKE_PROJECT_NAME} SHARED
         # List C/C++ source files with relative paths to this CMakeLists.txt.
         ${SRC_CPP_FILES})
+
 
 # Specifies libraries CMake should link to your target library. You
 # can link libraries from various origins, such as libraries defined in this

@@ -25,13 +25,12 @@ void BaseDecoder::freeResource() {
         avformat_close_input(&avFormatContext);
     }
     avCodec = nullptr;
-    inputFilePath.clear();
 }
 
-int BaseDecoder::decodeFile(const std::string &filePath, DecodeVideoCallback &decodeCallback) {
+int BaseDecoder::decodeFile(const std::string &inputFilePath, DecodeVideoCallback &decodeCallback) {
     freeResource();
-    inputFilePath = filePath;
-    std::thread thread([&](){
+    decoding = true;
+    std::thread thread([&, inputFilePath](){
         log(LOG_TAG, "decodeFile start ", inputFilePath.data());
         //open input
         int ret = avformat_open_input(&avFormatContext, inputFilePath.data(), nullptr, nullptr);
@@ -79,7 +78,7 @@ int BaseDecoder::decodeFile(const std::string &filePath, DecodeVideoCallback &de
             freeResource();
             return FFMPEG_API_FAIL;
         }
-        //open codec
+        //open videoCodec
         ret = avcodec_open2(avCodecContext, avCodec, nullptr);
         if(ret < 0){
             log(LOG_TAG, "avcodec_open2", ret);
@@ -93,10 +92,11 @@ int BaseDecoder::decodeFile(const std::string &filePath, DecodeVideoCallback &de
         avFrame->width = avCodecContext->width;
         avFrame->height = avCodecContext->height;
         avFrame->format = avCodecContext->pix_fmt;
+        avFrame->time_base = avCodecContext->time_base;
         av_frame_get_buffer(avFrame, 0);
 
         int frameCount = 0;
-        while(true) {
+        while(decoding) {
             av_packet_unref(avPacket);
             ret = av_read_frame(avFormatContext, avPacket);
             if(ret == 0) {
@@ -110,7 +110,9 @@ int BaseDecoder::decodeFile(const std::string &filePath, DecodeVideoCallback &de
                             log(LOG_TAG, "avcodec_receive_frame fail", ret);
                             break;
                         }
-
+                        if(avFrame->time_base.num == 0) {
+                            avFrame->time_base = avCodecContext->time_base;
+                        }
                         DecodeFrameData frameData = {frameCount, mediaType, avFrame, false};
                         decodeCallback(frameData);
                         frameCount++;
@@ -136,4 +138,8 @@ int BaseDecoder::decodeFile(const std::string &filePath, DecodeVideoCallback &de
     });
     thread.detach();
     return SUC;
+}
+
+void BaseDecoder::stopDecode() {
+    decoding = false;
 }
