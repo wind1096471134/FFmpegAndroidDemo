@@ -338,7 +338,7 @@ int avio_check(const char *url, int flags);
 /**
  * Open directory for reading.
  *
- * @param s       directory read avCodecContext. Pointer to a NULL pointer must be passed.
+ * @param s       directory read videoCodecContext. Pointer to a NULL pointer must be passed.
  * @param url     directory to be listed.
  * @param options A dictionary filled with protocol-private options. On return
  *                this parameter will be destroyed and replaced with a dictionary
@@ -353,7 +353,7 @@ int avio_open_dir(AVIODirContext **s, const char *url, AVDictionary **options);
  * Returned entry must be freed with avio_free_directory_entry(). In particular
  * it may outlive AVIODirContext.
  *
- * @param s         directory read avCodecContext.
+ * @param s         directory read videoCodecContext.
  * @param[out] next next entry or NULL when no more entries.
  * @return >=0 on success or negative on error. End of list is not considered an
  *             error.
@@ -366,7 +366,7 @@ int avio_read_dir(AVIODirContext *s, AVIODirEntry **next);
  * @note Entries created using avio_read_dir() are not deleted and must be
  * freeded with avio_free_directory_entry().
  *
- * @param s         directory read avCodecContext.
+ * @param s         directory read videoCodecContext.
  * @return >=0 on success or negative on error.
  */
 int avio_close_dir(AVIODirContext **s);
@@ -411,9 +411,9 @@ AVIOContext *avio_alloc_context(
                   int64_t (*seek)(void *opaque, int64_t offset, int whence));
 
 /**
- * Free the supplied IO avCodecContext and everything associated with it.
+ * Free the supplied IO videoCodecContext and everything associated with it.
  *
- * @param s Double pointer to the IO avCodecContext. This function will write NULL
+ * @param s Double pointer to the IO videoCodecContext. This function will write NULL
  * into s.
  */
 void avio_context_free(AVIOContext **s);
@@ -515,26 +515,26 @@ int64_t avio_size(AVIOContext *s);
 int avio_feof(AVIOContext *s);
 
 /**
- * Writes a formatted string to the avCodecContext taking a va_list.
+ * Writes a formatted string to the videoCodecContext taking a va_list.
  * @return number of bytes written, < 0 on error.
  */
 int avio_vprintf(AVIOContext *s, const char *fmt, va_list ap);
 
 /**
- * Writes a formatted string to the avCodecContext.
+ * Writes a formatted string to the videoCodecContext.
  * @return number of bytes written, < 0 on error.
  */
 int avio_printf(AVIOContext *s, const char *fmt, ...) av_printf_format(2, 3);
 
 /**
- * Write a NULL terminated array of strings to the avCodecContext.
+ * Write a NULL terminated array of strings to the videoCodecContext.
  * Usually you don't need to use this function directly but its macro wrapper,
  * avio_print.
  */
 void avio_print_string_array(AVIOContext *s, const char *strings[]);
 
 /**
- * Write strings (const char *) to the avCodecContext.
+ * Write strings (const char *) to the videoCodecContext.
  * This is a convenience macro around avio_print_string_array and it
  * automatically creates the string array from the variable argument list.
  * For simple string concatenations this function is more performant than using
@@ -629,12 +629,12 @@ int avio_get_str16be(AVIOContext *pb, int maxlen, char *buf, int buflen);
 
 /**
  * Use non-blocking mode.
- * If this flag is set, operations on the avCodecContext will return
+ * If this flag is set, operations on the videoCodecContext will return
  * AVERROR(EAGAIN) if they can not be performed immediately.
- * If this flag is not set, operations on the avCodecContext will never return
+ * If this flag is not set, operations on the videoCodecContext will never return
  * AVERROR(EAGAIN).
  * Note that this flag does not affect the opening/connecting of the
- * avCodecContext. Connecting a protocol will always block if necessary (e.g. on
+ * videoCodecContext. Connecting a protocol will always block if necessary (e.g. on
  * network protocols) but never hang (e.g. on busy devices).
  * Warning: non-blocking protocols is work-in-progress; this flag may be
  * silently ignored.
@@ -715,7 +715,7 @@ int avio_closep(AVIOContext **s);
 /**
  * Open a write only memory stream.
  *
- * @param s new IO avCodecContext
+ * @param s new IO videoCodecContext
  * @return zero if no error.
  */
 int avio_open_dyn_buf(AVIOContext **s);
@@ -726,7 +726,7 @@ int avio_open_dyn_buf(AVIOContext **s);
  * The buffer must NOT be freed.
  * No padding is added to the buffer.
  *
- * @param s IO avCodecContext
+ * @param s IO videoCodecContext
  * @param pbuffer pointer to a byte buffer
  * @return the length of the byte buffer
  */
@@ -737,7 +737,7 @@ int avio_get_dyn_buf(AVIOContext *s, uint8_t **pbuffer);
  * must be freed with av_free().
  * Padding of AV_INPUT_BUFFER_PADDING_SIZE is added to the buffer.
  *
- * @param s IO avCodecContext
+ * @param s IO videoCodecContext
  * @param pbuffer pointer to a byte buffer
  * @return the length of the byte buffer
  */
@@ -767,7 +767,7 @@ const AVClass *avio_protocol_get_class(const char *name);
  * Pause and resume playing - only meaningful if using a network streaming
  * protocol (e.g. MMS).
  *
- * @param h     IO avCodecContext from which to call the read_pause function pointer
+ * @param h     IO videoCodecContext from which to call the read_pause function pointer
  * @param pause 1 for pause, 0 for resume
  */
 int     avio_pause(AVIOContext *h, int pause);
@@ -776,7 +776,7 @@ int     avio_pause(AVIOContext *h, int pause);
  * Seek to a given timestamp relative to some component stream.
  * Only meaningful if using a network streaming protocol (e.g. MMS.).
  *
- * @param h IO avCodecContext from which to call the seek function pointers
+ * @param h IO videoCodecContext from which to call the seek function pointers
  * @param stream_index The stream index that the timestamp is relative to.
  *        If stream_index is (-1) the timestamp should be in AV_TIME_BASE
  *        units from the beginning of the presentation.
@@ -806,9 +806,9 @@ struct AVBPrint;
 int avio_read_to_bprint(AVIOContext *h, struct AVBPrint *pb, size_t max_size);
 
 /**
- * Accept and allocate a client avCodecContext on a server avCodecContext.
- * @param  s the server avCodecContext
- * @param  c the client avCodecContext, must be unallocated
+ * Accept and allocate a client videoCodecContext on a server videoCodecContext.
+ * @param  s the server videoCodecContext
+ * @param  c the client videoCodecContext, must be unallocated
  * @return   >= 0 on success or a negative value corresponding
  *           to an AVERROR on failure
  */
@@ -817,7 +817,7 @@ int avio_accept(AVIOContext *s, AVIOContext **c);
 /**
  * Perform one step of the protocol handshake to accept a new client.
  * This function must be called on a client returned by avio_accept() before
- * using it as a read/write avCodecContext.
+ * using it as a read/write videoCodecContext.
  * It is separate from avio_accept() because it may block.
  * A step of the handshake is defined by places where the application may
  * decide to change the proceedings.
@@ -828,7 +828,7 @@ int avio_accept(AVIOContext *s, AVIOContext **c);
  * If the handshake is already finished, avio_handshake() does nothing and
  * returns 0 immediately.
  *
- * @param  c the client avCodecContext to perform the handshake on
+ * @param  c the client videoCodecContext to perform the handshake on
  * @return   0   on a complete and successful handshake
  *           > 0 if the handshake progressed, but is not complete
  *           < 0 for an AVERROR code

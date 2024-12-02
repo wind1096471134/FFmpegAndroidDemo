@@ -737,7 +737,7 @@ static void add_input_streams(const OptionsContext *o, Demuxer *d)
 
         ret = avcodec_parameters_to_context(ist->dec_ctx, par);
         if (ret < 0) {
-            av_log(NULL, AV_LOG_ERROR, "Error initializing the decoder avCodecContext.\n");
+            av_log(NULL, AV_LOG_ERROR, "Error initializing the decoder videoCodecContext.\n");
             exit_program(1);
         }
 
@@ -801,7 +801,7 @@ static void add_input_streams(const OptionsContext *o, Demuxer *d)
 
         ret = avcodec_parameters_from_context(ist->par, ist->dec_ctx);
         if (ret < 0) {
-            av_log(NULL, AV_LOG_ERROR, "Error initializing the decoder avCodecContext.\n");
+            av_log(NULL, AV_LOG_ERROR, "Error initializing the decoder videoCodecContext.\n");
             exit_program(1);
         }
     }

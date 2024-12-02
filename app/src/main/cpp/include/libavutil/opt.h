@@ -258,7 +258,7 @@ typedef struct AVOption {
     const char *help;
 
     /**
-     * The offset relative to the avCodecContext structure where the option
+     * The offset relative to the videoCodecContext structure where the option
      * value is stored. It should be 0 for named constants.
      */
     int offset;
@@ -382,7 +382,7 @@ typedef struct AVOptionRanges {
  * options for which it is opt->flags & req_flags.
  * @param rej_flags rejected flags for the options to show. Show only the
  * options for which it is !(opt->flags & req_flags).
- * @param av_log_obj log avCodecContext to use for showing the options
+ * @param av_log_obj log videoCodecContext to use for showing the options
  */
 int av_opt_show2(void *obj, void *av_log_obj, int req_flags, int rej_flags);
 
@@ -407,7 +407,7 @@ void av_opt_set_defaults2(void *s, int mask, int flags);
 /**
  * Parse the key/value pairs list in opts. For each key/value pair
  * found, stores the value in the field in ctx that is named like the
- * key. ctx must be an AVClass avCodecContext, storing is done using
+ * key. ctx must be an AVClass videoCodecContext, storing is done using
  * AVOptions.
  *
  * @param opts options string to parse, may be NULL

@@ -71,7 +71,7 @@
 /**
  * Get a frame with filtered data from sink and put it in frame.
  *
- * @param ctx    pointer to a buffersink or abuffersink filter avCodecContext.
+ * @param ctx    pointer to a buffersink or abuffersink filter videoCodecContext.
  * @param frame  pointer to an allocated frame that will be filled with data.
  *               The data must be freed using av_frame_unref() / av_frame_free()
  * @param flags  a combination of AV_BUFFERSINK_FLAG_* flags
@@ -134,7 +134,7 @@ AVBufferRef *    av_buffersink_get_hw_frames_ctx       (const AVFilterContext *c
 /**
  * Get a frame with filtered data from sink and put it in frame.
  *
- * @param ctx pointer to a avCodecContext of a buffersink or abuffersink AVFilter.
+ * @param ctx pointer to a videoCodecContext of a buffersink or abuffersink AVFilter.
  * @param frame pointer to an allocated frame that will be filled with data.
  *              The data must be freed using av_frame_unref() / av_frame_free()
  *
@@ -152,7 +152,7 @@ int av_buffersink_get_frame(AVFilterContext *ctx, AVFrame *frame);
  * of samples read. This function is less efficient than
  * av_buffersink_get_frame(), because it copies the data around.
  *
- * @param ctx pointer to a avCodecContext of the abuffersink AVFilter.
+ * @param ctx pointer to a videoCodecContext of the abuffersink AVFilter.
  * @param frame pointer to an allocated frame that will be filled with data.
  *              The data must be freed using av_frame_unref() / av_frame_free()
  *              frame will contain exactly nb_samples audio samples, except at

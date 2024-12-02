@@ -713,7 +713,7 @@ void CDECL lame_print_internals( const lame_global_flags *gfp);
  *
 */
 int CDECL lame_encode_buffer (
-        lame_global_flags*  gfp,           /* global avCodecContext handle         */
+        lame_global_flags*  gfp,           /* global videoCodecContext handle         */
         const short int     buffer_l [],   /* PCM data for left channel     */
         const short int     buffer_r [],   /* PCM data for right channel    */
         const int           nsamples,      /* number of samples per channel */
@@ -728,7 +728,7 @@ int CDECL lame_encode_buffer (
  * channel, not the total number of samples in pcm[]
  */
 int CDECL lame_encode_buffer_interleaved(
-        lame_global_flags*  gfp,           /* global avCodecContext handlei        */
+        lame_global_flags*  gfp,           /* global videoCodecContext handlei        */
         short int           pcm[],         /* PCM data for left and right
                                               channel, interleaved          */
         int                 num_samples,   /* number of samples per channel,
@@ -744,7 +744,7 @@ int CDECL lame_encode_buffer_interleaved(
  * short int, +/- 32768
  */
 int CDECL lame_encode_buffer_float(
-        lame_global_flags*  gfp,           /* global avCodecContext handle         */
+        lame_global_flags*  gfp,           /* global videoCodecContext handle         */
         const float         pcm_l [],      /* PCM data for left channel     */
         const float         pcm_r [],      /* PCM data for right channel    */
         const int           nsamples,      /* number of samples per channel */
@@ -797,7 +797,7 @@ int CDECL lame_encode_buffer_interleaved_ieee_double(
  *
  */
 int CDECL lame_encode_buffer_long(
-        lame_global_flags*  gfp,           /* global avCodecContext handle         */
+        lame_global_flags*  gfp,           /* global videoCodecContext handle         */
         const long     buffer_l [],       /* PCM data for left channel     */
         const long     buffer_r [],       /* PCM data for right channel    */
         const int           nsamples,      /* number of samples per channel */
@@ -811,7 +811,7 @@ int CDECL lame_encode_buffer_long(
  *
  */
 int CDECL lame_encode_buffer_long2(
-        lame_global_flags*  gfp,           /* global avCodecContext handle         */
+        lame_global_flags*  gfp,           /* global videoCodecContext handle         */
         const long     buffer_l [],       /* PCM data for left channel     */
         const long     buffer_r [],       /* PCM data for right channel    */
         const int           nsamples,      /* number of samples per channel */
@@ -829,7 +829,7 @@ int CDECL lame_encode_buffer_long2(
  *
  */
 int CDECL lame_encode_buffer_int(
-        lame_global_flags*  gfp,           /* global avCodecContext handle         */
+        lame_global_flags*  gfp,           /* global videoCodecContext handle         */
         const int      buffer_l [],       /* PCM data for left channel     */
         const int      buffer_r [],       /* PCM data for right channel    */
         const int           nsamples,      /* number of samples per channel */
@@ -854,7 +854,7 @@ int CDECL lame_encode_buffer_int(
  * return code = number of bytes output to mp3buf. Can be 0
  */
 int CDECL lame_encode_flush(
-        lame_global_flags *  gfp,    /* global avCodecContext handle                 */
+        lame_global_flags *  gfp,    /* global videoCodecContext handle                 */
         unsigned char*       mp3buf, /* pointer to encoded MP3 stream         */
         int                  size);  /* number of valid octets in this stream */
 
@@ -876,7 +876,7 @@ int CDECL lame_encode_flush(
  * return code = number of bytes output to mp3buf. Can be 0
  */
 int CDECL lame_encode_flush_nogap(
-        lame_global_flags *  gfp,    /* global avCodecContext handle                 */
+        lame_global_flags *  gfp,    /* global videoCodecContext handle                 */
         unsigned char*       mp3buf, /* pointer to encoded MP3 stream         */
         int                  size);  /* number of valid octets in this stream */
 
@@ -888,7 +888,7 @@ int CDECL lame_encode_flush_nogap(
  * lame_encode_flush_nogap().
  */
 int CDECL lame_init_bitstream(
-        lame_global_flags *  gfp);    /* global avCodecContext handle                 */
+        lame_global_flags *  gfp);    /* global videoCodecContext handle                 */
 
 
 

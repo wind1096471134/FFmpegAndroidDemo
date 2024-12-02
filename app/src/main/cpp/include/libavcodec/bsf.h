@@ -43,7 +43,7 @@
  * AVBitStreamFilter using av_bsf_get_by_name() or av_bsf_iterate(), then pass
  * it to av_bsf_alloc() to create an AVBSFContext. Fill in the user-settable
  * AVBSFContext fields, as described in its documentation, then call
- * av_bsf_init() to prepare the filter avCodecContext for use.
+ * av_bsf_init() to prepare the filter videoCodecContext for use.
  *
  * Submit packets for filtering using av_bsf_send_packet(), obtain filtered
  * results with av_bsf_receive_packet(). When no more input packets will be
@@ -51,7 +51,7 @@
  * av_bsf_receive_packet() will then return trailing packets, if any are
  * produced by the filter.
  *
- * Finally, free the filter avCodecContext with av_bsf_free().
+ * Finally, free the filter videoCodecContext with av_bsf_free().
  * @{
  */
 
@@ -72,7 +72,7 @@ typedef struct AVBSFContext {
     const AVClass *av_class;
 
     /**
-     * The bitstream filter this avCodecContext is an instance of.
+     * The bitstream filter this videoCodecContext is an instance of.
      */
     const struct AVBitStreamFilter *filter;
 
@@ -148,12 +148,12 @@ const AVBitStreamFilter *av_bsf_get_by_name(const char *name);
 const AVBitStreamFilter *av_bsf_iterate(void **opaque);
 
 /**
- * Allocate a avCodecContext for a given bitstream filter. The caller must fill in the
- * avCodecContext parameters as described in the documentation and then call
+ * Allocate a videoCodecContext for a given bitstream filter. The caller must fill in the
+ * videoCodecContext parameters as described in the documentation and then call
  * av_bsf_init() before sending any data to the filter.
  *
  * @param filter the filter for which to allocate an instance.
- * @param[out] ctx a pointer into which the pointer to the newly-allocated avCodecContext
+ * @param[out] ctx a pointer into which the pointer to the newly-allocated videoCodecContext
  *                 will be written. It must be freed with av_bsf_free() after the
  *                 filtering is done.
  *
@@ -227,7 +227,7 @@ int av_bsf_receive_packet(AVBSFContext *ctx, AVPacket *pkt);
 void av_bsf_flush(AVBSFContext *ctx);
 
 /**
- * Free a bitstream filter avCodecContext and everything associated with it; write NULL
+ * Free a bitstream filter videoCodecContext and everything associated with it; write NULL
  * into the supplied pointer.
  */
 void av_bsf_free(AVBSFContext **ctx);
@@ -266,14 +266,14 @@ void av_bsf_list_free(AVBSFList **lst);
  * Append bitstream filter to the list of bitstream filters.
  *
  * @param lst List to append to
- * @param bsf Filter avCodecContext to be appended
+ * @param bsf Filter videoCodecContext to be appended
  *
  * @return >=0 on success, negative AVERROR in case of failure
  */
 int av_bsf_list_append(AVBSFList *lst, AVBSFContext *bsf);
 
 /**
- * Construct new bitstream filter avCodecContext given it's name and options
+ * Construct new bitstream filter videoCodecContext given it's name and options
  * and append it to the list of bitstream filters.
  *
  * @param lst      List to append to

@@ -1076,7 +1076,7 @@ static void do_subtitle_out(OutputFile *of,
 
     /* Note: DVB subtitle need one packet to draw them and one other
        packet to clear them */
-    /* XXX: signal it in the codec avCodecContext ? */
+    /* XXX: signal it in the codec videoCodecContext ? */
     if (enc->codec_id == AV_CODEC_ID_DVB_SUBTITLE)
         nb = 2;
     else
@@ -2273,7 +2273,7 @@ static int decode_video(InputStream *ist, AVPacket *pkt, int *got_output, int64_
         if (ist->dec_ctx->width  != decoded_frame->width ||
             ist->dec_ctx->height != decoded_frame->height ||
             ist->dec_ctx->pix_fmt != decoded_frame->format) {
-            av_log(NULL, AV_LOG_DEBUG, "Frame parameters mismatch avCodecContext %d,%d,%d != %d,%d,%d\n",
+            av_log(NULL, AV_LOG_DEBUG, "Frame parameters mismatch videoCodecContext %d,%d,%d != %d,%d,%d\n",
                 decoded_frame->width,
                 decoded_frame->height,
                 decoded_frame->format,
@@ -2887,7 +2887,7 @@ static int init_output_stream_streamcopy(OutputStream *ost)
         ret = av_opt_set_dict(codec_ctx, &ost->encoder_opts);
     if (ret < 0) {
         av_log(ost, AV_LOG_FATAL,
-               "Error setting up codec avCodecContext options.\n");
+               "Error setting up codec videoCodecContext options.\n");
         avcodec_free_context(&codec_ctx);
         return ret;
     }
@@ -3268,7 +3268,7 @@ static int init_output_stream(OutputStream *ost, AVFrame *frame,
         ret = avcodec_parameters_from_context(ost->st->codecpar, ost->enc_ctx);
         if (ret < 0) {
             av_log(ost, AV_LOG_FATAL,
-                   "Error initializing the output stream codec avCodecContext.\n");
+                   "Error initializing the output stream codec videoCodecContext.\n");
             exit_program(1);
         }
 

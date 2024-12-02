@@ -362,7 +362,7 @@ int av_fifo_generic_read(AVFifoBuffer *f, void *dest, int buf_size, void (*func)
  * Feed data from a user-supplied callback to an AVFifoBuffer.
  * @param f AVFifoBuffer to write to
  * @param src data source; non-const since it may be used as a
- * modifiable avCodecContext by the function defined in func
+ * modifiable videoCodecContext by the function defined in func
  * @param size number of bytes to write
  * @param func generic write function; the first parameter is src,
  * the second is dest_buf, the third is dest_buf_size.

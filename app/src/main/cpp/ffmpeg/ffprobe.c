@@ -277,7 +277,7 @@ static struct section sections[] = {
 
 static const OptionDef *options;
 
-/* FFprobe avCodecContext */
+/* FFprobe videoCodecContext */
 static const char *input_filename;
 static const char *print_input_filename;
 static const AVInputFormat *iformat = NULL;
@@ -534,7 +534,7 @@ typedef enum {
 
 typedef struct Writer {
     const AVClass *priv_class;      ///< private class of the writer, if any
-    int priv_size;                  ///< private size for the writer avCodecContext
+    int priv_size;                  ///< private size for the writer videoCodecContext
     const char *name;
 
     int  (*init)  (WriterContext *wctx);
@@ -553,7 +553,7 @@ typedef struct Writer {
 struct WriterContext {
     const AVClass *class;           ///< class of the writer
     const Writer *writer;           ///< the Writer of which this is an instance
-    AVIOContext *avio;              ///< the I/O avCodecContext used to write
+    AVIOContext *avio;              ///< the I/O videoCodecContext used to write
 
     void (* writer_w8)(WriterContext *wctx, int b);
     void (* writer_put_str)(WriterContext *wctx, const char *str);
@@ -726,14 +726,14 @@ static int writer_open(WriterContext **wctx, const Writer *writer, const char *a
         const AVDictionaryEntry *opt = NULL;
 
         if ((ret = av_dict_parse_string(&opts, args, "=", ":", 0)) < 0) {
-            av_log(*wctx, AV_LOG_ERROR, "Failed to parse option string '%s' provided to writer avCodecContext\n", args);
+            av_log(*wctx, AV_LOG_ERROR, "Failed to parse option string '%s' provided to writer videoCodecContext\n", args);
             av_dict_free(&opts);
             goto fail;
         }
 
         while ((opt = av_dict_iterate(opts, opt))) {
             if ((ret = av_opt_set(*wctx, opt->key, opt->value, AV_OPT_SEARCH_CHILDREN)) < 0) {
-                av_log(*wctx, AV_LOG_ERROR, "Failed to set option '%s' with value '%s' provided to writer avCodecContext\n",
+                av_log(*wctx, AV_LOG_ERROR, "Failed to set option '%s' with value '%s' provided to writer videoCodecContext\n",
                        opt->key, opt->value);
                 av_dict_free(&opts);
                 goto fail;
@@ -2541,7 +2541,7 @@ static int show_log(WriterContext *w, int section_ids, int section_id, int log_l
     for (i=0; i<log_buffer_size; i++) {
         if (log_buffer[i].log_level <= log_level) {
             writer_print_section_header(w, section_id);
-            print_str("avCodecContext", log_buffer[i].context_name);
+            print_str("videoCodecContext", log_buffer[i].context_name);
             print_int("level", log_buffer[i].log_level);
             print_int("category", log_buffer[i].category);
             if (log_buffer[i].parent_name) {

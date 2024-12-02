@@ -60,7 +60,7 @@
  * @li an @ref AVFormatContext.streams "array" of AVStreams, which describe all
  * elementary streams stored in the file. AVStreams are typically referred to
  * using their index in this array.
- * @li an @ref AVFormatContext.pb "I/O avCodecContext". It is either opened by lavf or
+ * @li an @ref AVFormatContext.pb "I/O videoCodecContext". It is either opened by lavf or
  * set by user for input, always set by user for output (unless you are dealing
  * with an AVFMT_NOFILE format).
  *
@@ -72,7 +72,7 @@
  * from avformat_get_class()). Private (format-specific) options are provided by
  * AVFormatContext.priv_data if and only if AVInputFormat.priv_class /
  * AVOutputFormat.priv_class of the corresponding format struct is non-NULL.
- * Further options may be provided by the @ref AVFormatContext.pb "I/O avCodecContext",
+ * Further options may be provided by the @ref AVFormatContext.pb "I/O videoCodecContext",
  * if its AVClass is non-NULL, and the protocols layer. See the discussion on
  * nesting in @ref avoptions documentation to learn how to access those.
  *
@@ -126,7 +126,7 @@
  *
  * Since the format of the opened file is in general not known until after
  * avformat_open_input() has returned, it is not possible to set demuxer private
- * options on a preallocated avCodecContext. Instead, the options should be passed to
+ * options on a preallocated videoCodecContext. Instead, the options should be passed to
  * avformat_open_input() wrapped in an AVDictionary:
  * @code
  * AVDictionary *options = NULL;
@@ -188,13 +188,13 @@
  * packets and av_write_trailer() for finalizing the file.
  *
  * At the beginning of the muxing process, the caller must first call
- * avformat_alloc_context() to create a muxing avCodecContext. The caller then sets up
- * the muxer by filling the various fields in this avCodecContext:
+ * avformat_alloc_context() to create a muxing videoCodecContext. The caller then sets up
+ * the muxer by filling the various fields in this videoCodecContext:
  *
  * - The @ref AVFormatContext.oformat "oformat" field must be set to select the
  *   muxer that will be used.
  * - Unless the format is of the AVFMT_NOFILE type, the @ref AVFormatContext.pb
- *   "pb" field must be set to an opened IO avCodecContext, either returned from
+ *   "pb" field must be set to an opened IO videoCodecContext, either returned from
  *   avio_open2() or a custom one.
  * - Unless the format is of the AVFMT_NOSTREAMS type, at least one stream must
  *   be created with the avformat_new_stream() function. The caller should fill
@@ -207,7 +207,7 @@
  *   described later).
  * - It is advised to manually initialize only the relevant fields in
  *   AVCodecParameters, rather than using @ref avcodec_parameters_copy() during
- *   remuxing: there is no guarantee that the codec avCodecContext values remain valid
+ *   remuxing: there is no guarantee that the codec videoCodecContext values remain valid
  *   for both input and output format contexts.
  * - The caller may fill in additional information, such as @ref
  *   AVFormatContext.metadata "global" or @ref AVStream.metadata "per-stream"
@@ -217,16 +217,16 @@
  *   stored in the output depends on what the container format and the muxer
  *   support.
  *
- * When the muxing avCodecContext is fully set up, the caller must call
+ * When the muxing videoCodecContext is fully set up, the caller must call
  * avformat_write_header() to initialize the muxer internals and write the file
- * header. Whether anything actually is written to the IO avCodecContext at this step
+ * header. Whether anything actually is written to the IO videoCodecContext at this step
  * depends on the muxer, but this function must always be called. Any muxer
  * private options must be passed in the options parameter to this function.
  *
  * The data is then sent to the muxer by repeatedly calling av_write_frame() or
  * av_interleaved_write_frame() (consult those functions' documentation for
  * discussion on the difference between them; only one of them may be used with
- * a single muxing avCodecContext, they should not be mixed). Do note that the timing
+ * a single muxing videoCodecContext, they should not be mixed). Do note that the timing
  * information on the packets sent to the muxer must be in the corresponding
  * AVStream's timebase. That timebase is set by the muxer (in the
  * avformat_write_header() step) and may be different from the timebase
@@ -234,7 +234,7 @@
  *
  * Once all the data has been written, the caller must call av_write_trailer()
  * to flush any buffered packets and finalize the output file, then close the IO
- * avCodecContext (if any) and finally free the muxing avCodecContext with
+ * videoCodecContext (if any) and finally free the muxing videoCodecContext with
  * avformat_free_context().
  * @}
  *
@@ -416,7 +416,7 @@ struct AVDeviceInfoList;
  * Allocate and read the payload of a packet and initialize its
  * fields with default values.
  *
- * @param s    associated IO avCodecContext
+ * @param s    associated IO videoCodecContext
  * @param pkt packet
  * @param size desired payload size
  * @return >0 (read size) if OK, AVERROR_xxx otherwise
@@ -432,7 +432,7 @@ int av_get_packet(AVIOContext *s, AVPacket *pkt, int size);
  * when there is no reasonable way to know (an upper bound of)
  * the final size.
  *
- * @param s    associated IO avCodecContext
+ * @param s    associated IO videoCodecContext
  * @param pkt packet
  * @param size amount of data to read
  * @return >0 (read size) if OK, AVERROR_xxx otherwise, previous data
@@ -533,7 +533,7 @@ typedef struct AVOutputFormat {
     const struct AVCodecTag * const *codec_tag;
 
 
-    const AVClass *priv_class; ///< AVClass for the private avCodecContext
+    const AVClass *priv_class; ///< AVClass for the private videoCodecContext
 } AVOutputFormat;
 /**
  * @}
@@ -573,7 +573,7 @@ typedef struct AVInputFormat {
 
     const struct AVCodecTag * const *codec_tag;
 
-    const AVClass *priv_class; ///< AVClass for the private avCodecContext
+    const AVClass *priv_class; ///< AVClass for the private videoCodecContext
 
     /**
      * Comma-separated list of mime types.
@@ -1090,7 +1090,7 @@ enum AVDurationEstimationMethod {
 };
 
 /**
- * Format I/O avCodecContext.
+ * Format I/O videoCodecContext.
  * New fields can be added to the end with minor version bumps.
  * Removal, reordering and changes to existing fields require a major
  * version bump.
@@ -1134,12 +1134,12 @@ typedef struct AVFormatContext {
     void *priv_data;
 
     /**
-     * I/O avCodecContext.
+     * I/O videoCodecContext.
      *
      * - demuxing: either set by the user before avformat_open_input() (then
      *             the user must close it manually) or set by avformat_open_input().
      * - muxing: set by the user before avformat_write_header(). The caller must
-     *           take care of closing / freeing the IO avCodecContext.
+     *           take care of closing / freeing the IO videoCodecContext.
      *
      * Do NOT set this field if AVFMT_NOFILE flag is set in
      * iformat/oformat.flags. In such a case, the (de)muxer will handle
@@ -1513,7 +1513,7 @@ typedef struct AVFormatContext {
     int seek2any;
 
     /**
-     * Flush the I/O avCodecContext after each packet.
+     * Flush the I/O videoCodecContext after each packet.
      * - encoding: Set by user
      * - decoding: unused
      */
@@ -1557,7 +1557,7 @@ typedef struct AVFormatContext {
 
     /**
      * IO repositioned flag.
-     * This is set by avformat when the underlaying IO avCodecContext read pointer
+     * This is set by avformat when the underlaying IO videoCodecContext read pointer
      * is repositioned, for example when doing byte based seeking.
      * Demuxers can use the flag to detect such changes.
      */
@@ -1645,10 +1645,10 @@ typedef struct AVFormatContext {
      *
      * Whenever a muxer or a demuxer needs to open an IO stream (typically from
      * avformat_open_input() for demuxers, but for certain formats can happen at
-     * other times as well), it will call this callback to obtain an IO avCodecContext.
+     * other times as well), it will call this callback to obtain an IO videoCodecContext.
      *
-     * @param s the format avCodecContext
-     * @param pb on success, the newly opened IO avCodecContext should be returned here
+     * @param s the format videoCodecContext
+     * @param pb on success, the newly opened IO videoCodecContext should be returned here
      * @param url the url to open
      * @param flags a combination of AVIO_FLAG_*
      * @param options a dictionary of additional options, with the same
@@ -1708,8 +1708,8 @@ typedef struct AVFormatContext {
      * Therefore this callback is used instead of io_close by the generic
      * libavformat code if io_close is NULL or the default.
      *
-     * @param s the format avCodecContext
-     * @param pb IO avCodecContext to be closed and freed
+     * @param s the format videoCodecContext
+     * @param pb IO videoCodecContext to be closed and freed
      * @return 0 on success, a negative AVERROR code on failure
      */
     int (*io_close2)(struct AVFormatContext *s, AVIOContext *pb);
@@ -1798,14 +1798,14 @@ const AVInputFormat *av_demuxer_iterate(void **opaque);
 
 /**
  * Allocate an AVFormatContext.
- * avformat_free_context() can be used to free the avCodecContext and everything
+ * avformat_free_context() can be used to free the videoCodecContext and everything
  * allocated by the framework within it.
  */
 AVFormatContext *avformat_alloc_context(void);
 
 /**
  * Free an AVFormatContext and all its streams.
- * @param s avCodecContext to free
+ * @param s videoCodecContext to free
  */
 void avformat_free_context(AVFormatContext *s);
 
@@ -1893,17 +1893,17 @@ AVProgram *av_new_program(AVFormatContext *s, int id);
 
 /**
  * Allocate an AVFormatContext for an output format.
- * avformat_free_context() can be used to free the avCodecContext and
+ * avformat_free_context() can be used to free the videoCodecContext and
  * everything allocated by the framework within it.
  *
- * @param ctx           pointee is set to the created format avCodecContext,
+ * @param ctx           pointee is set to the created format videoCodecContext,
  *                      or to NULL in case of failure
- * @param oformat       format to use for allocating the avCodecContext, if NULL
+ * @param oformat       format to use for allocating the videoCodecContext, if NULL
  *                      format_name and filename are used instead
  * @param format_name   the name of output format to use for allocating the
- *                      avCodecContext, if NULL filename is used instead
+ *                      videoCodecContext, if NULL filename is used instead
  * @param filename      the name of the filename to use for allocating the
- *                      avCodecContext, may be NULL
+ *                      videoCodecContext, may be NULL
  *
  * @return  >= 0 in case of success, a negative AVERROR code in case of
  *          failure
@@ -1964,7 +1964,7 @@ const AVInputFormat *av_probe_input_format3(const AVProbeData *pd,
  * @param pb             the bytestream to probe
  * @param fmt            the input format is put here
  * @param url            the url of the stream
- * @param logctx         the log avCodecContext
+ * @param logctx         the log videoCodecContext
  * @param offset         the offset within the bytestream to probe from
  * @param max_probe_size the maximum probe buffer size (zero for default)
  *
@@ -2003,7 +2003,7 @@ int av_probe_input_buffer(AVIOContext *pb, const AVInputFormat **fmt,
  *
  * @return 0 on success, a negative AVERROR on failure.
  *
- * @note If you want to use custom IO, preallocate the format avCodecContext and set its pb field.
+ * @note If you want to use custom IO, preallocate the format videoCodecContext and set its pb field.
  */
 int avformat_open_input(AVFormatContext **ps, const char *url,
                         const AVInputFormat *fmt, AVDictionary **options);
@@ -2628,10 +2628,10 @@ void av_url_split(char *proto,         int proto_size,
  * duration, bitrate, streams, container, programs, metadata, side data,
  * codec and time base.
  *
- * @param ic        the avCodecContext to analyze
+ * @param ic        the videoCodecContext to analyze
  * @param index     index of the stream to dump information about
  * @param url       the URL to print, such as source or destination file
- * @param is_output Select whether the specified avCodecContext is an input(0) or output(1)
+ * @param is_output Select whether the specified videoCodecContext is an input(0) or output(1)
  */
 void av_dump_format(AVFormatContext *ic,
                     int index,
@@ -2675,7 +2675,7 @@ int av_filename_number_test(const char *filename);
  * for getting unique dynamic payload types.
  *
  * @param ac array of AVFormatContexts describing the RTP streams. If the
- *           array is composed by only one avCodecContext, such avCodecContext can contain
+ *           array is composed by only one videoCodecContext, such videoCodecContext can contain
  *           multiple AVStreams (one AVStream per RTP stream). Otherwise,
  *           all the contexts in the array (an AVCodecContext per RTP stream)
  *           must contain only one AVStream.
@@ -2754,7 +2754,7 @@ const struct AVCodecTag *avformat_get_mov_audio_tags(void);
  * otherwise use the frame aspect ratio. This way a container setting, which is
  * usually easy to modify can override the coded value in the frames.
  *
- * @param format the format avCodecContext which the stream is part of
+ * @param format the format videoCodecContext which the stream is part of
  * @param stream the stream which the frame is part of
  * @param frame the frame with the aspect ratio to be determined
  * @return the guessed (valid) sample_aspect_ratio, 0/1 if no idea
@@ -2764,7 +2764,7 @@ AVRational av_guess_sample_aspect_ratio(AVFormatContext *format, AVStream *strea
 /**
  * Guess the frame rate, based on both the container and codec information.
  *
- * @param ctx the format avCodecContext which the stream is part of
+ * @param ctx the format videoCodecContext which the stream is part of
  * @param stream the stream which the frame is part of
  * @param frame the frame for which the frame rate should be determined, may be NULL
  * @return the guessed (valid) frame rate, 0/1 if no idea

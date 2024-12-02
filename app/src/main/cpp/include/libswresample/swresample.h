@@ -60,7 +60,7 @@
  * The same job can be done using swr_alloc_set_opts2() as well:
  * @code
  * SwrContext *swr = NULL;
- * int ret = swr_alloc_set_opts2(&swr,         // we're allocating a new avCodecContext
+ * int ret = swr_alloc_set_opts2(&swr,         // we're allocating a new videoCodecContext
  *                       &(AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO, // out_ch_layout
  *                       AV_SAMPLE_FMT_S16,    // out_sample_fmt
  *                       44100,                // out_sample_rate
@@ -74,7 +74,7 @@
  * Once all values have been set, it must be initialized with swr_init(). If
  * you need to change the conversion parameters, you can change the parameters
  * using @ref avoptions, as described above in the first example; or by using
- * swr_alloc_set_opts2(), but with the first argument the allocated avCodecContext.
+ * swr_alloc_set_opts2(), but with the first argument the allocated videoCodecContext.
  * You must then call swr_init() again.
  *
  * The conversion itself is done by repeatedly calling swr_convert().
@@ -112,7 +112,7 @@
  * @endcode
  *
  * When the conversion is finished, the conversion
- * avCodecContext and everything associated with it must be freed with swr_free().
+ * videoCodecContext and everything associated with it must be freed with swr_free().
  * A swr_close() function is also available, but it exists mainly for
  * compatibility with libavresample, and is not required to be called.
  *
@@ -181,7 +181,7 @@ enum SwrFilterType {
  */
 
 /**
- * The libswresample avCodecContext. Unlike libavcodec and libavformat, this structure
+ * The libswresample videoCodecContext. Unlike libavcodec and libavformat, this structure
  * is opaque. This means that if you would like to set options, you must use
  * the @ref avoptions API and cannot directly set values to members of the
  * structure.
@@ -209,26 +209,26 @@ const AVClass *swr_get_class(void);
  * with swr_alloc_set_opts2()) before calling swr_init().
  *
  * @see swr_alloc_set_opts2(), swr_init(), swr_free()
- * @return NULL on error, allocated avCodecContext otherwise
+ * @return NULL on error, allocated videoCodecContext otherwise
  */
 struct SwrContext *swr_alloc(void);
 
 /**
- * Initialize avCodecContext after user parameters have been set.
- * @note The avCodecContext must be configured using the AVOption API.
+ * Initialize videoCodecContext after user parameters have been set.
+ * @note The videoCodecContext must be configured using the AVOption API.
  *
  * @see av_opt_set_int()
  * @see av_opt_set_dict()
  *
- * @param[in,out]   s Swr avCodecContext to initialize
+ * @param[in,out]   s Swr videoCodecContext to initialize
  * @return AVERROR error code in case of failure.
  */
 int swr_init(struct SwrContext *s);
 
 /**
- * Check whether an swr avCodecContext has been initialized or not.
+ * Check whether an swr videoCodecContext has been initialized or not.
  *
- * @param[in]       s Swr avCodecContext to check
+ * @param[in]       s Swr videoCodecContext to check
  * @see swr_init()
  * @return positive if it has been initialized, 0 if not initialized
  */
@@ -240,9 +240,9 @@ int swr_is_initialized(struct SwrContext *s);
  *
  * This function does not require s to be allocated with swr_alloc(). On the
  * other hand, swr_alloc() can use swr_alloc_set_opts() to set the parameters
- * on the allocated avCodecContext.
+ * on the allocated videoCodecContext.
  *
- * @param s               existing Swr avCodecContext if available, or NULL if not
+ * @param s               existing Swr videoCodecContext if available, or NULL if not
  * @param out_ch_layout   output channel layout (AV_CH_LAYOUT_*)
  * @param out_sample_fmt  output sample format (AV_SAMPLE_FMT_*).
  * @param out_sample_rate output sample rate (frequency in Hz)
@@ -250,10 +250,10 @@ int swr_is_initialized(struct SwrContext *s);
  * @param in_sample_fmt   input sample format (AV_SAMPLE_FMT_*).
  * @param in_sample_rate  input sample rate (frequency in Hz)
  * @param log_offset      logging level offset
- * @param log_ctx         parent logging avCodecContext, can be NULL
+ * @param log_ctx         parent logging videoCodecContext, can be NULL
  *
  * @see swr_init(), swr_free()
- * @return NULL on error, allocated avCodecContext otherwise
+ * @return NULL on error, allocated videoCodecContext otherwise
  * @deprecated use @ref swr_alloc_set_opts2()
  */
 attribute_deprecated
@@ -268,10 +268,10 @@ struct SwrContext *swr_alloc_set_opts(struct SwrContext *s,
  *
  * This function does not require *ps to be allocated with swr_alloc(). On the
  * other hand, swr_alloc() can use swr_alloc_set_opts2() to set the parameters
- * on the allocated avCodecContext.
+ * on the allocated videoCodecContext.
  *
- * @param ps              Pointer to an existing Swr avCodecContext if available, or to NULL if not.
- *                        On success, *ps will be set to the allocated avCodecContext.
+ * @param ps              Pointer to an existing Swr videoCodecContext if available, or to NULL if not.
+ *                        On success, *ps will be set to the allocated videoCodecContext.
  * @param out_ch_layout   output channel layout (e.g. AV_CHANNEL_LAYOUT_*)
  * @param out_sample_fmt  output sample format (AV_SAMPLE_FMT_*).
  * @param out_sample_rate output sample rate (frequency in Hz)
@@ -279,11 +279,11 @@ struct SwrContext *swr_alloc_set_opts(struct SwrContext *s,
  * @param in_sample_fmt   input sample format (AV_SAMPLE_FMT_*).
  * @param in_sample_rate  input sample rate (frequency in Hz)
  * @param log_offset      logging level offset
- * @param log_ctx         parent logging avCodecContext, can be NULL
+ * @param log_ctx         parent logging videoCodecContext, can be NULL
  *
  * @see swr_init(), swr_free()
  * @return 0 on success, a negative AVERROR code on error.
- *         On error, the Swr avCodecContext is freed and *ps set to NULL.
+ *         On error, the Swr videoCodecContext is freed and *ps set to NULL.
  */
 int swr_alloc_set_opts2(struct SwrContext **ps,
                         const AVChannelLayout *out_ch_layout, enum AVSampleFormat out_sample_fmt, int out_sample_rate,
@@ -299,19 +299,19 @@ int swr_alloc_set_opts2(struct SwrContext **ps,
 /**
  * Free the given SwrContext and set the pointer to NULL.
  *
- * @param[in] s a pointer to a pointer to Swr avCodecContext
+ * @param[in] s a pointer to a pointer to Swr videoCodecContext
  */
 void swr_free(struct SwrContext **s);
 
 /**
- * Closes the avCodecContext so that swr_is_initialized() returns 0.
+ * Closes the videoCodecContext so that swr_is_initialized() returns 0.
  *
- * The avCodecContext can be brought back to life by running swr_init(),
+ * The videoCodecContext can be brought back to life by running swr_init(),
  * swr_init() can also be used without swr_close().
  * This function is mainly provided for simplifying the usecase
  * where one tries to support libavresample and libswresample.
  *
- * @param[in,out] s Swr avCodecContext to be closed
+ * @param[in,out] s Swr videoCodecContext to be closed
  */
 void swr_close(struct SwrContext *s);
 
@@ -332,7 +332,7 @@ void swr_close(struct SwrContext *s);
  * upper bound on the required number of output samples for the given number of
  * input samples. Conversion will run directly without copying whenever possible.
  *
- * @param s         allocated Swr avCodecContext, with parameters set
+ * @param s         allocated Swr videoCodecContext, with parameters set
  * @param out       output buffers, only the first one need be set in case of packed audio
  * @param out_count amount of space available for output in samples per channel
  * @param in        input buffers, only the first one need to be set in case of packed audio
@@ -354,7 +354,7 @@ int swr_convert(struct SwrContext *s, uint8_t **out, int out_count,
  *              in this case the output timestamps will match output sample numbers.
  *              See ffmpeg-resampler(1) for the two modes of compensation.
  *
- * @param[in] s     initialized Swr avCodecContext
+ * @param[in] s     initialized Swr videoCodecContext
  * @param[in] pts   timestamp for the next input sample, INT64_MIN if unknown
  * @see swr_set_compensation(), swr_drop_output(), and swr_inject_silence() are
  *      function used internally for timestamp compensation.
@@ -375,7 +375,7 @@ int64_t swr_next_pts(struct SwrContext *s, int64_t pts);
  * Activate resampling compensation ("soft" compensation). This function is
  * internally called when needed in swr_next_pts().
  *
- * @param[in,out] s             allocated Swr avCodecContext. If it is not initialized,
+ * @param[in,out] s             allocated Swr videoCodecContext. If it is not initialized,
  *                              or SWR_FLAG_RESAMPLE is not set, swr_init() is
  *                              called with the flag set.
  * @param[in]     sample_delta  delta in PTS per sample
@@ -392,7 +392,7 @@ int swr_set_compensation(struct SwrContext *s, int sample_delta, int compensatio
 /**
  * Set a customized input channel mapping.
  *
- * @param[in,out] s           allocated Swr avCodecContext, not yet initialized
+ * @param[in,out] s           allocated Swr videoCodecContext, not yet initialized
  * @param[in]     channel_map customized input channel mapping (array of channel
  *                            indexes, -1 for a muted channel)
  * @return >= 0 on success, or AVERROR error code in case of failure.
@@ -420,7 +420,7 @@ int swr_set_channel_mapping(struct SwrContext *s, const int *channel_map);
  * @param stride              distance between adjacent input channels in the
  *                            matrix array
  * @param matrix_encoding     matrixed stereo downmix mode (e.g. dplii)
- * @param log_ctx             parent logging avCodecContext, can be NULL
+ * @param log_ctx             parent logging videoCodecContext, can be NULL
  * @return                    0 on success, negative AVERROR code on failure
  * @deprecated                use @ref swr_build_matrix2()
  */
@@ -453,7 +453,7 @@ int swr_build_matrix(uint64_t in_layout, uint64_t out_layout,
  * @param stride              distance between adjacent input channels in the
  *                            matrix array
  * @param matrix_encoding     matrixed stereo downmix mode (e.g. dplii)
- * @param log_ctx             parent logging avCodecContext, can be NULL
+ * @param log_ctx             parent logging videoCodecContext, can be NULL
  * @return                    0 on success, negative AVERROR code on failure
  */
 int swr_build_matrix2(const AVChannelLayout *in_layout, const AVChannelLayout *out_layout,
@@ -466,7 +466,7 @@ int swr_build_matrix2(const AVChannelLayout *in_layout, const AVChannelLayout *o
 /**
  * Set a customized remix matrix.
  *
- * @param s       allocated Swr avCodecContext, not yet initialized
+ * @param s       allocated Swr videoCodecContext, not yet initialized
  * @param matrix  remix coefficients; matrix[i + stride * o] is
  *                the weight of input channel i in output channel o
  * @param stride  offset between lines of the matrix
@@ -487,7 +487,7 @@ int swr_set_matrix(struct SwrContext *s, const double *matrix, int stride);
  * This function, along with swr_inject_silence(), is called by swr_next_pts()
  * if needed for "hard" compensation.
  *
- * @param s     allocated Swr avCodecContext
+ * @param s     allocated Swr videoCodecContext
  * @param count number of samples to be dropped
  *
  * @return >= 0 on success, or a negative AVERROR code on failure
@@ -500,7 +500,7 @@ int swr_drop_output(struct SwrContext *s, int count);
  * This function, along with swr_drop_output(), is called by swr_next_pts()
  * if needed for "hard" compensation.
  *
- * @param s     allocated Swr avCodecContext
+ * @param s     allocated Swr videoCodecContext
  * @param count number of samples to be dropped
  *
  * @return >= 0 on success, or a negative AVERROR code on failure
@@ -518,7 +518,7 @@ int swr_inject_silence(struct SwrContext *s, int count);
  * output sample rate may be a poor choice to represent the delay, similarly
  * for upsampling and the input sample rate.
  *
- * @param s     swr avCodecContext
+ * @param s     swr videoCodecContext
  * @param base  timebase in which the returned delay will be:
  *              @li if it's set to 1 the returned delay is in seconds
  *              @li if it's set to 1000 the returned delay is in milliseconds
@@ -617,7 +617,7 @@ const char *swresample_license(void);
  * @see swr_convert()
  * @see swr_get_delay()
  *
- * @param swr             audio resample avCodecContext
+ * @param swr             audio resample videoCodecContext
  * @param output          output AVFrame
  * @param input           input AVFrame
  * @return                0 on success, AVERROR on failure or nonmatching
@@ -630,12 +630,12 @@ int swr_convert_frame(SwrContext *swr,
  * Configure or reconfigure the SwrContext using the information
  * provided by the AVFrames.
  *
- * The original resampling avCodecContext is reset even on failure.
- * The function calls swr_close() internally if the avCodecContext is open.
+ * The original resampling videoCodecContext is reset even on failure.
+ * The function calls swr_close() internally if the videoCodecContext is open.
  *
  * @see swr_close();
  *
- * @param swr             audio resample avCodecContext
+ * @param swr             audio resample videoCodecContext
  * @param out             output AVFrame
  * @param in              input AVFrame
  * @return                0 on success, AVERROR on failure.

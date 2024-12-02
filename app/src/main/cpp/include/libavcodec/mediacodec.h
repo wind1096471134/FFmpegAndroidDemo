@@ -40,30 +40,30 @@ typedef struct AVMediaCodecContext {
 } AVMediaCodecContext;
 
 /**
- * Allocate and initialize a MediaCodec avCodecContext.
+ * Allocate and initialize a MediaCodec videoCodecContext.
  *
  * When decoding with MediaCodec is finished, the caller must free the
- * MediaCodec avCodecContext with av_mediacodec_default_free.
+ * MediaCodec videoCodecContext with av_mediacodec_default_free.
  *
  * @return a pointer to a newly allocated AVMediaCodecContext on success, NULL otherwise
  */
 AVMediaCodecContext *av_mediacodec_alloc_context(void);
 
 /**
- * Convenience function that sets up the MediaCodec avCodecContext.
+ * Convenience function that sets up the MediaCodec videoCodecContext.
  *
- * @param avctx codec avCodecContext
- * @param ctx MediaCodec avCodecContext to initialize
+ * @param avctx codec videoCodecContext
+ * @param ctx MediaCodec videoCodecContext to initialize
  * @param surface reference to an android/view/Surface
  * @return 0 on success, < 0 otherwise
  */
 int av_mediacodec_default_init(AVCodecContext *avctx, AVMediaCodecContext *ctx, void *surface);
 
 /**
- * This function must be called to free the MediaCodec avCodecContext initialized with
+ * This function must be called to free the MediaCodec videoCodecContext initialized with
  * av_mediacodec_default_init().
  *
- * @param avctx codec avCodecContext
+ * @param avctx codec videoCodecContext
  */
 void av_mediacodec_default_free(AVCodecContext *avctx);
 

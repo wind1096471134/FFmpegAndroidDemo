@@ -213,7 +213,7 @@ typedef struct AVCodec {
     attribute_deprecated
     const uint64_t *channel_layouts;         ///< array of support channel layouts, or NULL if unknown. array is terminated by 0
 #endif
-    const AVClass *priv_class;              ///< AVClass for the private avCodecContext
+    const AVClass *priv_class;              ///< AVClass for the private videoCodecContext
     const AVProfile *profiles;              ///< array of recognized profiles, or NULL if unknown, array is terminated by {FF_PROFILE_UNKNOWN}
 
     /**
@@ -309,11 +309,11 @@ enum {
      *
      * When selecting this format for a decoder,
      * AVCodecContext.hw_frames_ctx should be set to a suitable frames
-     * avCodecContext inside the get_format() callback.  The frames avCodecContext
+     * videoCodecContext inside the get_format() callback.  The frames videoCodecContext
      * must have been created on a device of the specified type.
      *
      * When selecting this format for an encoder,
-     * AVCodecContext.hw_frames_ctx should be set to the avCodecContext which
+     * AVCodecContext.hw_frames_ctx should be set to the videoCodecContext which
      * will be used for the input frames before calling avcodec_open2().
      */
     AV_CODEC_HW_CONFIG_METHOD_HW_FRAMES_CTX = 0x02,
@@ -321,7 +321,7 @@ enum {
      * The codec supports this format by some internal method.
      *
      * This format can be selected without any additional configuration -
-     * no device or frames avCodecContext is required.
+     * no device or frames videoCodecContext is required.
      */
     AV_CODEC_HW_CONFIG_METHOD_INTERNAL      = 0x04,
     /**

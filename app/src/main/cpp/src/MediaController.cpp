@@ -6,7 +6,6 @@
 #include "MediaController.h"
 #include "VideoDecoder.h"
 #include "VideoEncoder.h"
-#include "AudioDecoder.h"
 #include "Error.h"
 #include "Util.h"
 #include "functional"
@@ -53,6 +52,7 @@ void MediaController::onDecodeFrameCallback(DecodeFrameData &data) {
 
 int MediaController::encodeImgToVideo(const std::string &imgInputPath, const std::string &videoOutputPath) {
     repeatVideoFrameNum = encodeFps * encodeDuration;//fps * duration
+    audioDecodeEnd = true;//here has no audio, so set it.
     videoEncoder->setEncodeCallback(shared_from_this());
     videoEncoder->encodeStart(videoOutputPath, {true, 3000000, 512, 512, DEFAULT_VIDEO_FPS}, {false});
     videoDecoder->decodeFile(imgInputPath, mediaDecodeFrameCallback);
@@ -79,7 +79,7 @@ MediaController::MediaController() {
         av_log_set_callback(av_log_default_callback);
     }
     videoDecoder = std::make_shared<VideoDecoder>();
-    audioDecoder = std::make_shared<AudioDecoder>();
+    audioDecoder = std::make_shared<VideoDecoder>();
     videoEncoder = std::make_shared<VideoEncoder>();
 
 }

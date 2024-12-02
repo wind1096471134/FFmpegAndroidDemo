@@ -107,7 +107,7 @@ int opt_timelimit(void *optctx, const char *opt, const char *arg);
  * Exit from the application if the string cannot be correctly
  * parsed or the corresponding value is invalid.
  *
- * @param context the avCodecContext of the value to be set (e.g. the
+ * @param context the videoCodecContext of the value to be set (e.g. the
  * corresponding command line option name)
  * @param numstr the string to be parsed
  * @param type the type (OPT_INT64 or OPT_FLOAT) as which the
@@ -123,7 +123,7 @@ double parse_number_or_die(const char *context, const char *numstr, int type,
  * value as a number of microseconds. Exit from the application if
  * the string cannot be correctly parsed.
  *
- * @param context the avCodecContext of the value to be set (e.g. the
+ * @param context the videoCodecContext of the value to be set (e.g. the
  * corresponding command line option name)
  * @param timestr the string to be parsed
  * @param is_duration a flag which tells how to interpret timestr, if
@@ -208,7 +208,7 @@ void show_help_default(const char *opt, const char *arg);
 /**
  * Parse the command line arguments.
  *
- * @param optctx an opaque options avCodecContext
+ * @param optctx an opaque options videoCodecContext
  * @param argc   number of command line arguments
  * @param argv   values of command line arguments
  * @param options Array with the definitions required to interpret every
@@ -291,7 +291,7 @@ typedef struct OptionParseContext {
 /**
  * Parse an options group and write results into optctx.
  *
- * @param optctx an app-specific options avCodecContext. NULL for global options group
+ * @param optctx an app-specific options videoCodecContext. NULL for global options group
  */
 int parse_optgroup(void *optctx, OptionGroup *g);
 
@@ -336,7 +336,7 @@ int locate_option(int argc, char **argv, const OptionDef *options,
 /**
  * Check if the given stream matches a stream specifier.
  *
- * @param s  Corresponding format avCodecContext.
+ * @param s  Corresponding format videoCodecContext.
  * @param st Stream from s to be checked.
  * @param spec A stream specifier of the [v|a|s|d]:[\<stream index\>] form.
  *
@@ -352,7 +352,7 @@ int check_stream_specifier(AVFormatContext *s, AVStream *st, const char *spec);
  *
  * @param opts     dictionary to place options in
  * @param codec_id ID of the codec that should be filtered for
- * @param s Corresponding format avCodecContext.
+ * @param s Corresponding format videoCodecContext.
  * @param st A stream from s for which the options should be filtered.
  * @param codec The particular codec for which the options should be filtered.
  *              If null, the default one is looked up according to the codec id.
@@ -367,7 +367,7 @@ AVDictionary *filter_codec_opts(AVDictionary *opts, enum AVCodecID codec_id,
  * Create an array of dictionaries, one dictionary for each stream
  * contained in s.
  * Each dictionary will contain the options from codec_opts which can
- * be applied to the corresponding stream codec avCodecContext.
+ * be applied to the corresponding stream codec videoCodecContext.
  *
  * @return pointer to the created array of dictionaries.
  * Calls exit() on failure.

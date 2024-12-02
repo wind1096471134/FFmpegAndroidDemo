@@ -219,7 +219,7 @@ int64_t av_compare_mod(uint64_t a, uint64_t b, uint64_t mod);
  * @param[in]     out_tb   Output timebase
  * @return        Timestamp expressed in terms of `out_tb`
  *
- * @note In the avCodecContext of this function, "duration" is in term of samples, not
+ * @note In the videoCodecContext of this function, "duration" is in term of samples, not
  *       seconds.
  */
 int64_t av_rescale_delta(AVRational in_tb, int64_t in_ts,  AVRational fs_tb, int duration, int64_t *last, AVRational out_tb);

@@ -40,7 +40,7 @@ typedef int (*av_pixelutils_sad_fn)(const uint8_t *src1, ptrdiff_t stride1,
  *                aligned on the block size.
  *                If set to 0, the returned sad function assume no particular
  *                alignment.
- * @param log_ctx avCodecContext used for logging, can be NULL
+ * @param log_ctx videoCodecContext used for logging, can be NULL
  *
  * @return a pointer to the SAD function or NULL in case of error (because of
  *         invalid parameters)

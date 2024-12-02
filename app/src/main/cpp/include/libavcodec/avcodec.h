@@ -453,7 +453,7 @@ typedef struct AVCodecContext {
     void *priv_data;
 
     /**
-     * Private avCodecContext used for internal data.
+     * Private videoCodecContext used for internal data.
      *
      * Unlike priv_data, this is not codec-specific. It is used in general
      * libavcodec functions.
@@ -1139,7 +1139,7 @@ typedef struct AVCodecContext {
      * - sample_rate, channel_layout, nb_samples (audio only)
      * Their values may differ from the corresponding values in
      * AVCodecContext. This callback must use the frame values, not the codec
-     * avCodecContext values, to calculate the required buffer size.
+     * videoCodecContext values, to calculate the required buffer size.
      *
      * This callback must fill the following fields in the frame:
      * - data[]
@@ -1405,7 +1405,7 @@ typedef struct AVCodecContext {
     const struct AVHWAccel *hwaccel;
 
     /**
-     * Legacy hardware accelerator avCodecContext.
+     * Legacy hardware accelerator videoCodecContext.
      *
      * For some hardware acceleration methods, the caller may use this field to
      * signal hwaccel-specific data to the codec. The struct pointed to by this
@@ -1536,7 +1536,7 @@ typedef struct AVCodecContext {
      * It will return only after finishing all tasks.
      * The user may replace this with some multithreaded implementation,
      * the default implementation will execute the parts serially.
-     * @param c avCodecContext passed also to func
+     * @param c videoCodecContext passed also to func
      * @param count the number of things to execute
      * @param arg2 argument passed unchanged to func
      * @param ret return values of executed functions, must have space for "count" values. May be NULL.
@@ -1957,7 +1957,7 @@ typedef struct AVCodecContext {
      *
      * @note when this option is set to zero, the width/height fields of the
      * AVCodecContext and output AVFrames have different meanings. The codec
-     * avCodecContext fields store display dimensions (with the coded dimensions in
+     * videoCodecContext fields store display dimensions (with the coded dimensions in
      * coded_width/height), while the frame fields store the coded dimensions
      * (with the display dimensions being determined by the crop_* fields).
      */
@@ -2130,7 +2130,7 @@ typedef struct AVHWAccel {
      * Note that buf can be NULL along with buf_size set to 0.
      * Otherwise, this means the whole frame is available at this point.
      *
-     * @param avctx the codec avCodecContext
+     * @param avctx the codec videoCodecContext
      * @param buf the frame data buffer base
      * @param buf_size the size of the frame in bytes
      * @return zero if successful, a negative value otherwise
@@ -2143,7 +2143,7 @@ typedef struct AVHWAccel {
      * Useful for hardware decoders which keep persistent state about the
      * video parameters, and need to receive any changes to update that state.
      *
-     * @param avctx the codec avCodecContext
+     * @param avctx the codec videoCodecContext
      * @param type the nal unit type
      * @param buf the nal unit data buffer
      * @param buf_size the size of the nal unit in bytes
@@ -2157,7 +2157,7 @@ typedef struct AVHWAccel {
      * Meaningful slice information (codec specific) is guaranteed to
      * be parsed at this point. This function is mandatory.
      *
-     * @param avctx the codec avCodecContext
+     * @param avctx the codec videoCodecContext
      * @param buf the slice data buffer base
      * @param buf_size the size of the slice in bytes
      * @return zero if successful, a negative value otherwise
@@ -2170,7 +2170,7 @@ typedef struct AVHWAccel {
      * The whole picture is parsed at this point and can now be sent
      * to the hardware accelerator. This function is mandatory.
      *
-     * @param avctx the codec avCodecContext
+     * @param avctx the codec videoCodecContext
      * @return zero if successful, a negative value otherwise
      */
     int (*end_frame)(AVCodecContext *avctx);
@@ -2213,7 +2213,7 @@ typedef struct AVHWAccel {
     int caps_internal;
 
     /**
-     * Fill the given hw_frames avCodecContext with current codec parameters. Called
+     * Fill the given hw_frames videoCodecContext with current codec parameters. Called
      * from get_format. Refer to avcodec_get_hw_frames_parameters() for
      * details.
      *
@@ -2367,7 +2367,7 @@ const char *avcodec_license(void);
 AVCodecContext *avcodec_alloc_context3(const AVCodec *codec);
 
 /**
- * Free the codec avCodecContext and everything associated with it and write NULL to
+ * Free the codec videoCodecContext and everything associated with it and write NULL to
  * the provided pointer.
  */
 void avcodec_free_context(AVCodecContext **avctx);
@@ -2390,7 +2390,7 @@ const AVClass *avcodec_get_subtitle_rect_class(void);
 
 /**
  * Fill the parameters struct based on the values from the supplied codec
- * avCodecContext. Any allocated fields in par are freed and replaced with duplicates
+ * videoCodecContext. Any allocated fields in par are freed and replaced with duplicates
  * of the corresponding fields in codec.
  *
  * @return >= 0 on success, a negative AVERROR code on failure
@@ -2399,7 +2399,7 @@ int avcodec_parameters_from_context(AVCodecParameters *par,
                                     const AVCodecContext *codec);
 
 /**
- * Fill the codec avCodecContext based on the values from the supplied codec
+ * Fill the codec videoCodecContext based on the values from the supplied codec
  * parameters. Any allocated fields in codec that have a corresponding field in
  * par are freed and replaced with duplicates of the corresponding field in par.
  * Fields in codec that do not have a counterpart in par are not touched.
@@ -2411,7 +2411,7 @@ int avcodec_parameters_to_context(AVCodecContext *codec,
 
 /**
  * Initialize the AVCodecContext to use the given AVCodec. Prior to using this
- * function the avCodecContext has to be allocated with avcodec_alloc_context3().
+ * function the videoCodecContext has to be allocated with avcodec_alloc_context3().
  *
  * The functions avcodec_find_decoder_by_name(), avcodec_find_encoder_by_name(),
  * avcodec_find_decoder() and avcodec_find_encoder() provide an easy way for
@@ -2426,16 +2426,16 @@ int avcodec_parameters_to_context(AVCodecContext *codec,
  * if (!codec)
  *     exit(1);
  *
- * avCodecContext = avcodec_alloc_context3(codec);
+ * videoCodecContext = avcodec_alloc_context3(codec);
  *
- * if (avcodec_open2(avCodecContext, codec, opts) < 0)
+ * if (avcodec_open2(videoCodecContext, codec, opts) < 0)
  *     exit(1);
  * @endcode
  *
- * @param avctx The avCodecContext to initialize.
- * @param codec The codec to open this avCodecContext for. If a non-NULL codec has been
+ * @param avctx The videoCodecContext to initialize.
+ * @param codec The codec to open this videoCodecContext for. If a non-NULL codec has been
  *              previously passed to avcodec_alloc_context3() or
- *              for this avCodecContext, then this parameter MUST be either NULL or
+ *              for this videoCodecContext, then this parameter MUST be either NULL or
  *              equal to the previously passed codec.
  * @param options A dictionary filled with AVCodecContext and codec-private options.
  *                On return this object will be filled with options that were not found.
@@ -2455,7 +2455,7 @@ int avcodec_open2(AVCodecContext *avctx, const AVCodec *codec, AVDictionary **op
  * codec. Subsequent calls will do nothing.
  *
  * @note Do not use this function. Use avcodec_free_context() to destroy a
- * codec avCodecContext (either open or closed). Opening and closing a codec avCodecContext
+ * codec videoCodecContext (either open or closed). Opening and closing a codec videoCodecContext
  * multiple times is not supported anymore -- use multiple codec contexts
  * instead.
  */
@@ -2559,7 +2559,7 @@ enum AVChromaLocation avcodec_chroma_pos_to_enum(int xpos, int ypos);
  * @note The AVCodecContext MUST have been opened with @ref avcodec_open2()
  * before packets may be fed to the decoder.
  *
- * @param avctx the codec avCodecContext
+ * @param avctx the codec videoCodecContext
  * @param[out] sub The preallocated AVSubtitle in which the decoded subtitle will be stored,
  *                 must be freed with avsubtitle_free if *got_sub_ptr is set.
  * @param[in,out] got_sub_ptr Zero if no subtitle could be decompressed, otherwise, it is nonzero.
@@ -2583,7 +2583,7 @@ int avcodec_decode_subtitle2(AVCodecContext *avctx, AVSubtitle *sub,
  * @note The AVCodecContext MUST have been opened with @ref avcodec_open2()
  *       before packets may be fed to the decoder.
  *
- * @param avctx codec avCodecContext
+ * @param avctx codec videoCodecContext
  * @param[in] avpkt The input AVPacket. Usually, this will be a single video
  *                  frame, or several complete audio frames.
  *                  Ownership of the packet remains with the caller, and the
@@ -2620,7 +2620,7 @@ int avcodec_send_packet(AVCodecContext *avctx, const AVPacket *avpkt);
  * Return decoded output data from a decoder or encoder (when the
  * AV_CODEC_FLAG_RECON_FRAME flag is used).
  *
- * @param avctx codec avCodecContext
+ * @param avctx codec videoCodecContext
  * @param frame This will be set to a reference-counted video or audio
  *              frame (depending on the decoder type) allocated by the
  *              codec. Note that the function will always call
@@ -2644,7 +2644,7 @@ int avcodec_receive_frame(AVCodecContext *avctx, AVFrame *frame);
  * Supply a raw video or audio frame to the encoder. Use avcodec_receive_packet()
  * to retrieve buffered output packets.
  *
- * @param avctx     codec avCodecContext
+ * @param avctx     codec videoCodecContext
  * @param[in] frame AVFrame containing the raw audio or video frame to be encoded.
  *                  Ownership of the frame remains with the caller, and the
  *                  encoder will not write to the frame. The encoder may create
@@ -2679,7 +2679,7 @@ int avcodec_send_frame(AVCodecContext *avctx, const AVFrame *frame);
 /**
  * Read encoded data from the encoder.
  *
- * @param avctx codec avCodecContext
+ * @param avctx codec videoCodecContext
  * @param avpkt This will be set to a reference-counted packet allocated by the
  *              encoder. Note that the function will always call
  *              av_packet_unref(avpkt) before doing anything else.
@@ -2770,7 +2770,7 @@ int avcodec_receive_packet(AVCodecContext *avctx, AVPacket *avpkt);
  * The function is stateless, and does not change the AVCodecContext or the
  * device_ref AVHWDeviceContext.
  *
- * @param avctx The avCodecContext which is currently calling get_format, and which
+ * @param avctx The videoCodecContext which is currently calling get_format, and which
  *              implicitly contains all state needed for filling the returned
  *              AVHWFramesContext properly.
  * @param device_ref A reference to the AVHWDeviceContext describing the device
@@ -2998,8 +2998,8 @@ AVCodecParserContext *av_parser_init(int codec_id);
 /**
  * Parse a packet.
  *
- * @param s             parser avCodecContext.
- * @param avctx         codec avCodecContext.
+ * @param s             parser videoCodecContext.
+ * @param avctx         codec videoCodecContext.
  * @param poutbuf       set to pointer to parsed buffer or NULL if not yet finished.
  * @param poutbuf_size  set to size of parsed buffer or zero if not yet finished.
  * @param buf           input buffer.
@@ -3155,7 +3155,7 @@ void avcodec_flush_buffers(AVCodecContext *avctx);
 /**
  * Return audio frame duration.
  *
- * @param avctx        codec avCodecContext
+ * @param avctx        codec videoCodecContext
  * @param frame_bytes  size of the frame, or 0 if unknown
  * @return             frame duration, in samples, if known. 0 if not able to
  *                     determine.

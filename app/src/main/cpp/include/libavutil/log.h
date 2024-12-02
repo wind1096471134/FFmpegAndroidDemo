@@ -59,19 +59,19 @@ typedef enum {
 struct AVOptionRanges;
 
 /**
- * Describe the class of an AVClass avCodecContext structure. That is an
+ * Describe the class of an AVClass videoCodecContext structure. That is an
  * arbitrary struct of which the first field is a pointer to an
  * AVClass struct (e.g. AVCodecContext, AVFormatContext etc.).
  */
 typedef struct AVClass {
     /**
      * The name of the class; usually it is the same name as the
-     * avCodecContext structure type to which the AVClass is associated.
+     * videoCodecContext structure type to which the AVClass is associated.
      */
     const char* class_name;
 
     /**
-     * A pointer to a function which returns the name of a avCodecContext
+     * A pointer to a function which returns the name of a videoCodecContext
      * instance ctx associated with the class.
      */
     const char* (*item_name)(void* ctx);
@@ -98,10 +98,10 @@ typedef struct AVClass {
     int log_level_offset_offset;
 
     /**
-     * Offset in the structure where a pointer to the parent avCodecContext for
+     * Offset in the structure where a pointer to the parent videoCodecContext for
      * logging is stored. For example a decoder could pass its AVCodecContext
-     * to eval as such a parent avCodecContext, which an av_log() implementation
-     * could then leverage to display the parent avCodecContext.
+     * to eval as such a parent videoCodecContext, which an av_log() implementation
+     * could then leverage to display the parent videoCodecContext.
      * The offset can be NULL.
      */
     int parent_log_context_offset;
@@ -323,9 +323,9 @@ void av_log_default_callback(void *avcl, int level, const char *fmt,
                              va_list vl);
 
 /**
- * Return the avCodecContext name
+ * Return the videoCodecContext name
  *
- * @param  ctx The AVClass avCodecContext
+ * @param  ctx The AVClass videoCodecContext
  *
  * @return The AVClass class_name
  */

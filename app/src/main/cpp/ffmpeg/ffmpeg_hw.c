@@ -470,7 +470,7 @@ int hw_device_setup_for_encode(OutputStream *ost)
             (config->pix_fmt == AV_PIX_FMT_NONE ||
              config->pix_fmt == ost->enc_ctx->pix_fmt)) {
             av_log(ost->enc_ctx, AV_LOG_VERBOSE, "Using input "
-                   "frames avCodecContext (format %s) with %s encoder.\n",
+                   "frames videoCodecContext (format %s) with %s encoder.\n",
                    av_get_pix_fmt_name(ost->enc_ctx->pix_fmt),
                    ost->enc_ctx->codec->name);
             ost->enc_ctx->hw_frames_ctx = av_buffer_ref(frames_ref);

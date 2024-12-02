@@ -150,8 +150,8 @@ int ffurl_open_whitelist(URLContext **puc, const char *filename, int flags,
 /**
  * Accept an URLContext c on an URLContext s
  *
- * @param  s server avCodecContext
- * @param  c client avCodecContext, must be unallocated.
+ * @param  s server videoCodecContext
+ * @param  c client videoCodecContext, must be unallocated.
  * @return >= 0 on success, ff_neterrno() on failure.
  */
 int ffurl_accept(URLContext *s, URLContext **c);
@@ -164,7 +164,7 @@ int ffurl_accept(URLContext *s, URLContext **c);
  * usually the first step, and the return value can be:
  * (largest value for this protocol) + (return value from other protocol)
  *
- * @param  c the client avCodecContext
+ * @param  c the client videoCodecContext
  * @return >= 0 on success or a negative value corresponding
  *         to an AVERROR code on failure
  */

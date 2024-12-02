@@ -231,7 +231,7 @@ typedef struct AVFilter {
     /**
      * Filter pre-initialization function
      *
-     * This callback will be called immediately after the filter avCodecContext is
+     * This callback will be called immediately after the filter videoCodecContext is
      * allocated, to allow allocating and initing sub-objects.
      *
      * If this callback is not NULL, the uninit callback will be called on
@@ -443,7 +443,7 @@ struct AVFilterContext {
      * filter should create them in.  All other filters will ignore this field:
      * in particular, a filter which consumes or processes hardware frames will
      * instead use the hw_frames_ctx field in AVFilterLink to carry the
-     * hardware avCodecContext information.
+     * hardware videoCodecContext information.
      */
     AVBufferRef *hw_device_ctx;
 
@@ -763,7 +763,7 @@ const AVFilter *avfilter_get_by_name(const char *name);
 /**
  * Initialize a filter with the supplied parameters.
  *
- * @param ctx  uninitialized filter avCodecContext to initialize
+ * @param ctx  uninitialized filter videoCodecContext to initialize
  * @param args Options to initialize the filter with. This must be a
  *             ':'-separated list of options in the 'key=value' form.
  *             May be NULL if the options have been set directly using the
@@ -775,7 +775,7 @@ int avfilter_init_str(AVFilterContext *ctx, const char *args);
 /**
  * Initialize a filter with the supplied dictionary of options.
  *
- * @param ctx     uninitialized filter avCodecContext to initialize
+ * @param ctx     uninitialized filter videoCodecContext to initialize
  * @param options An AVDictionary filled with options for this filter. On
  *                return this parameter will be destroyed and replaced with
  *                a dict containing options that were not found. This dictionary
@@ -795,7 +795,7 @@ int avfilter_init_str(AVFilterContext *ctx, const char *args);
 int avfilter_init_dict(AVFilterContext *ctx, AVDictionary **options);
 
 /**
- * Free a filter avCodecContext. This will also remove the filter from its
+ * Free a filter videoCodecContext. This will also remove the filter from its
  * filtergraph's list of filters.
  *
  * @param filter the filter to free
@@ -827,7 +827,7 @@ typedef struct AVFilterGraphInternal AVFilterGraphInternal;
  * A function pointer passed to the @ref AVFilterGraph.execute callback to be
  * executed multiple times, possibly in parallel.
  *
- * @param ctx the filter avCodecContext the job belongs to
+ * @param ctx the filter videoCodecContext the job belongs to
  * @param arg an opaque parameter passed through from @ref
  *            AVFilterGraph.execute
  * @param jobnr the index of the job being executed
@@ -840,7 +840,7 @@ typedef int (avfilter_action_func)(AVFilterContext *ctx, void *arg, int jobnr, i
 /**
  * A function executing multiple jobs, possibly in parallel.
  *
- * @param ctx the filter avCodecContext to which the jobs belong
+ * @param ctx the filter videoCodecContext to which the jobs belong
  * @param func the function to be called multiple times
  * @param arg the argument to be passed to func
  * @param ret a nb_jobs-sized array to be filled with return values from each
@@ -938,7 +938,7 @@ AVFilterGraph *avfilter_graph_alloc(void);
  *             different filters, libavfilter itself assigns no semantics to
  *             this parameter. May be NULL.
  *
- * @return the avCodecContext of the newly created filter instance (note that it is
+ * @return the videoCodecContext of the newly created filter instance (note that it is
  *         also retrievable directly through AVFilterGraph.filters or with
  *         avfilter_graph_get_filter()) on success or NULL on failure.
  */
@@ -992,7 +992,7 @@ enum {
  * Check validity and configure all the links and formats in the graph.
  *
  * @param graphctx the filter graph
- * @param log_ctx avCodecContext used for logging
+ * @param log_ctx videoCodecContext used for logging
  * @return >= 0 in case of success, a negative AVERROR code otherwise
  */
 int avfilter_graph_config(AVFilterGraph *graphctx, void *log_ctx);
@@ -1010,13 +1010,13 @@ void avfilter_graph_free(AVFilterGraph **graph);
  * where it is used to communicate open (unlinked) inputs and outputs from and
  * to the caller.
  * This struct specifies, per each not connected pad contained in the graph, the
- * filter avCodecContext and the pad index required for establishing a link.
+ * filter videoCodecContext and the pad index required for establishing a link.
  */
 typedef struct AVFilterInOut {
     /** unique name for this input/output in the list */
     char *name;
 
-    /** filter avCodecContext associated to this input/output */
+    /** filter videoCodecContext associated to this input/output */
     AVFilterContext *filter_ctx;
 
     /** index of the filt_ctx pad to use for linking */
@@ -1051,7 +1051,7 @@ void avfilter_inout_free(AVFilterInOut **inout);
  * outputs of the already existing filters, which are provided as
  * inputs to the parsed filters.
  *
- * @param graph   the filter graph where to link the parsed graph avCodecContext
+ * @param graph   the filter graph where to link the parsed graph videoCodecContext
  * @param filters string to be parsed
  * @param inputs  linked list to the inputs of the graph
  * @param outputs linked list to the outputs of the graph
@@ -1068,7 +1068,7 @@ int avfilter_graph_parse(AVFilterGraph *graph, const char *filters,
  * filter is not specified, "in" is assumed; if the output label of
  * the last filter is not specified, "out" is assumed.
  *
- * @param graph   the filter graph where to link the parsed graph avCodecContext
+ * @param graph   the filter graph where to link the parsed graph videoCodecContext
  * @param filters string to be parsed
  * @param inputs  pointer to a linked list to the inputs of the graph, may be NULL.
  *                If non-NULL, *inputs is updated to contain the list of open inputs
@@ -1085,7 +1085,7 @@ int avfilter_graph_parse_ptr(AVFilterGraph *graph, const char *filters,
 /**
  * Add a graph described by a string to a graph.
  *
- * @param[in]  graph   the filter graph where to link the parsed graph avCodecContext
+ * @param[in]  graph   the filter graph where to link the parsed graph videoCodecContext
  * @param[in]  filters string to be parsed
  * @param[out] inputs  a linked list of all free (unlinked) inputs of the
  *                     parsed graph will be returned here. It is to be freed
@@ -1133,12 +1133,12 @@ typedef struct AVFilterPadParams {
  */
 typedef struct AVFilterParams {
     /**
-     * The filter avCodecContext.
+     * The filter videoCodecContext.
      *
      * Created by avfilter_graph_segment_create_filters() based on
      * AVFilterParams.filter_name and instance_name.
      *
-     * Callers may also create the filter avCodecContext manually, then they should
+     * Callers may also create the filter videoCodecContext manually, then they should
      * av_free() filter_name and set it to NULL. Such AVFilterParams instances
      * are then skipped by avfilter_graph_segment_create_filters().
      */
@@ -1274,7 +1274,7 @@ int avfilter_graph_segment_parse(AVFilterGraph *graph, const char *graph_str,
  * instances are ignored.
  *
  * For any filter created by this function, the corresponding
- * AVFilterParams.filter is set to the newly-created filter avCodecContext,
+ * AVFilterParams.filter is set to the newly-created filter videoCodecContext,
  * AVFilterParams.filter_name and AVFilterParams.instance_name are freed and set
  * to NULL.
  *
@@ -1307,7 +1307,7 @@ int avfilter_graph_segment_create_filters(AVFilterGraphSegment *seg, int flags);
  *
  * Any creation-pending filters (see avfilter_graph_segment_create_filters())
  * present in the segment will cause this function to fail. AVFilterParams with
- * no associated filter avCodecContext are simply skipped.
+ * no associated filter videoCodecContext are simply skipped.
  *
  * @param seg the filtergraph segment to process
  * @param flags reserved for future use, caller must set to 0 for now
@@ -1328,7 +1328,7 @@ int avfilter_graph_segment_apply_opts(AVFilterGraphSegment *seg, int flags);
  *
  * Any creation-pending filters (see avfilter_graph_segment_create_filters())
  * present in the segment will cause this function to fail. AVFilterParams with
- * no associated filter avCodecContext or whose filter avCodecContext is already initialized,
+ * no associated filter videoCodecContext or whose filter videoCodecContext is already initialized,
  * are simply skipped.
  *
  * @param seg the filtergraph segment to process

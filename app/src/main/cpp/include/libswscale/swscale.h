@@ -155,7 +155,7 @@ int sws_isSupportedEndiannessConversion(enum AVPixelFormat pix_fmt);
 struct SwsContext *sws_alloc_context(void);
 
 /**
- * Initialize the swscaler avCodecContext sws_context.
+ * Initialize the swscaler videoCodecContext sws_context.
  *
  * @return zero or positive value on success, a negative value on
  * error
@@ -164,7 +164,7 @@ av_warn_unused_result
 int sws_init_context(struct SwsContext *sws_context, SwsFilter *srcFilter, SwsFilter *dstFilter);
 
 /**
- * Free the swscaler avCodecContext swsContext.
+ * Free the swscaler videoCodecContext swsContext.
  * If swsContext is NULL, then does nothing.
  */
 void sws_freeContext(struct SwsContext *swsContext);
@@ -186,7 +186,7 @@ void sws_freeContext(struct SwsContext *swsContext);
  *              For SWS_GAUSS param[0] tunes the exponent and thus cutoff
  *              frequency
  *              For SWS_LANCZOS param[0] tunes the width of the window function
- * @return a pointer to an allocated avCodecContext, or NULL in case of error
+ * @return a pointer to an allocated videoCodecContext, or NULL in case of error
  * @note this function is to be removed after a saner alternative is
  *       written
  */
@@ -204,7 +204,7 @@ struct SwsContext *sws_getContext(int srcW, int srcH, enum AVPixelFormat srcForm
  * top-bottom or bottom-top order. If slices are provided in
  * non-sequential order the behavior of the function is undefined.
  *
- * @param c         the scaling avCodecContext previously created with
+ * @param c         the scaling videoCodecContext previously created with
  *                  sws_getContext()
  * @param srcSlice  the array containing the pointers to the planes of
  *                  the source slice
@@ -234,7 +234,7 @@ int sws_scale(struct SwsContext *c, const uint8_t *const srcSlice[],
  * - sws_receive_slice(0, dst->height)
  * - sws_frame_end()
  *
- * @param c   The scaling avCodecContext
+ * @param c   The scaling videoCodecContext
  * @param dst The destination frame. See documentation for sws_frame_start() for
  *            more details.
  * @param src The source frame.
@@ -250,7 +250,7 @@ int sws_scale_frame(struct SwsContext *c, AVFrame *dst, const AVFrame *src);
  * This function will retain references to src and dst, so they must both use
  * refcounted buffers (if allocated by the caller, in case of dst).
  *
- * @param c   The scaling avCodecContext
+ * @param c   The scaling videoCodecContext
  * @param dst The destination frame.
  *
  *            The data buffers may either be already allocated by the caller or
@@ -276,7 +276,7 @@ int sws_frame_start(struct SwsContext *c, AVFrame *dst, const AVFrame *src);
  * and sws_receive_slice() calls are done, before any new sws_frame_start()
  * calls.
  *
- * @param c   The scaling avCodecContext
+ * @param c   The scaling videoCodecContext
  */
 void sws_frame_end(struct SwsContext *c);
 
@@ -286,7 +286,7 @@ void sws_frame_end(struct SwsContext *c);
  * any order, but may not overlap. For vertically subsampled pixel formats, the
  * slices must be aligned according to subsampling.
  *
- * @param c   The scaling avCodecContext
+ * @param c   The scaling videoCodecContext
  * @param slice_start first row of the slice
  * @param slice_height number of rows in the slice
  *
@@ -299,7 +299,7 @@ int sws_send_slice(struct SwsContext *c, unsigned int slice_start,
  * Request a horizontal slice of the output data to be written into the frame
  * previously provided to sws_frame_start().
  *
- * @param c   The scaling avCodecContext
+ * @param c   The scaling videoCodecContext
  * @param slice_start first row of the slice; must be a multiple of
  *                    sws_receive_slice_alignment()
  * @param slice_height number of rows in the slice; must be a multiple of
@@ -318,7 +318,7 @@ int sws_receive_slice(struct SwsContext *c, unsigned int slice_start,
 /**
  * Get the alignment required for slices
  *
- * @param c   The scaling avCodecContext
+ * @param c   The scaling videoCodecContext
  * @return alignment required for output slices requested with sws_receive_slice().
  *         Slice offsets and sizes passed to sws_receive_slice() must be
  *         multiples of the value returned from this function.
@@ -326,7 +326,7 @@ int sws_receive_slice(struct SwsContext *c, unsigned int slice_start,
 unsigned int sws_receive_slice_alignment(const struct SwsContext *c);
 
 /**
- * @param c the scaling avCodecContext
+ * @param c the scaling videoCodecContext
  * @param dstRange flag indicating the while-black range of the output (1=jpeg / 0=mpeg)
  * @param srcRange flag indicating the while-black range of the input (1=jpeg / 0=mpeg)
  * @param table the yuv2rgb coefficients describing the output yuv space, normally ff_yuv2rgb_coeffs[x]
@@ -380,12 +380,12 @@ SwsFilter *sws_getDefaultFilter(float lumaGBlur, float chromaGBlur,
 void sws_freeFilter(SwsFilter *filter);
 
 /**
- * Check if avCodecContext can be reused, otherwise reallocate a new one.
+ * Check if videoCodecContext can be reused, otherwise reallocate a new one.
  *
- * If avCodecContext is NULL, just calls sws_getContext() to get a new
- * avCodecContext. Otherwise, checks if the parameters are the ones already
- * saved in avCodecContext. If that is the case, returns the current
- * avCodecContext. Otherwise, frees avCodecContext and gets a new avCodecContext with
+ * If videoCodecContext is NULL, just calls sws_getContext() to get a new
+ * videoCodecContext. Otherwise, checks if the parameters are the ones already
+ * saved in videoCodecContext. If that is the case, returns the current
+ * videoCodecContext. Otherwise, frees videoCodecContext and gets a new videoCodecContext with
  * the new parameters.
  *
  * Be warned that srcFilter and dstFilter are not checked, they

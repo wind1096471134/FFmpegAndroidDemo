@@ -30,7 +30,7 @@
  * however it will error out if you try to set a different Java VM.
  *
  * @param vm Java virtual machine
- * @param log_ctx avCodecContext used for logging, can be NULL
+ * @param log_ctx videoCodecContext used for logging, can be NULL
  * @return 0 on success, < 0 otherwise
  */
 int av_jni_set_java_vm(void *vm, void *log_ctx);

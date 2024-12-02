@@ -63,15 +63,15 @@
  * // Select from a string returned by av_hash_names()
  * hash_name = ...;
  *
- * // Allocate a hash avCodecContext
+ * // Allocate a hash videoCodecContext
  * ret = av_hash_alloc(&ctx, hash_name);
  * if (ret < 0)
  *     return ret;
  *
- * // Initialize the hash avCodecContext
+ * // Initialize the hash videoCodecContext
  * av_hash_init(ctx);
  *
- * // Update the hash avCodecContext with data
+ * // Update the hash videoCodecContext with data
  * while (data_left) {
  *     av_hash_update(ctx, data, size);
  * }
@@ -84,14 +84,14 @@
  * if (!output_buf)
  *     return AVERROR(ENOMEM);
  *
- * // Finalize the hash avCodecContext.
+ * // Finalize the hash videoCodecContext.
  * // You can use any of the av_hash_final*() functions provided, for other
  * // output formats. If you do so, be sure to adjust the memory allocation
  * // above. See the function documentation below for the exact amount of extra
  * // memory needed.
  * av_hash_final(ctx, output_buffer);
  *
- * // Free the avCodecContext
+ * // Free the videoCodecContext
  * av_hash_freep(&ctx);
  * @endcode
  *
@@ -115,11 +115,11 @@
 struct AVHashContext;
 
 /**
- * Allocate a hash avCodecContext for the algorithm specified by name.
+ * Allocate a hash videoCodecContext for the algorithm specified by name.
  *
  * @return  >= 0 for success, a negative error code for failure
  *
- * @note The avCodecContext is not initialized after a call to this function; you must
+ * @note The videoCodecContext is not initialized after a call to this function; you must
  * call av_hash_init() to do so.
  */
 int av_hash_alloc(struct AVHashContext **ctx, const char *name);
@@ -135,7 +135,7 @@ int av_hash_alloc(struct AVHashContext **ctx, const char *name);
 const char *av_hash_names(int i);
 
 /**
- * Get the name of the algorithm corresponding to the given hash avCodecContext.
+ * Get the name of the algorithm corresponding to the given hash videoCodecContext.
  */
 const char *av_hash_get_name(const struct AVHashContext *ctx);
 
@@ -161,37 +161,37 @@ const char *av_hash_get_name(const struct AVHashContext *ctx);
  * The maximum value this function will currently return is available as macro
  * #AV_HASH_MAX_SIZE.
  *
- * @param[in]     ctx Hash avCodecContext
+ * @param[in]     ctx Hash videoCodecContext
  * @return            Size of the hash value in bytes
  */
 int av_hash_get_size(const struct AVHashContext *ctx);
 
 /**
- * Initialize or reset a hash avCodecContext.
+ * Initialize or reset a hash videoCodecContext.
  *
- * @param[in,out] ctx Hash avCodecContext
+ * @param[in,out] ctx Hash videoCodecContext
  */
 void av_hash_init(struct AVHashContext *ctx);
 
 /**
- * Update a hash avCodecContext with additional data.
+ * Update a hash videoCodecContext with additional data.
  *
- * @param[in,out] ctx Hash avCodecContext
- * @param[in]     src Data to be added to the hash avCodecContext
+ * @param[in,out] ctx Hash videoCodecContext
+ * @param[in]     src Data to be added to the hash videoCodecContext
  * @param[in]     len Size of the additional data
  */
 void av_hash_update(struct AVHashContext *ctx, const uint8_t *src, size_t len);
 
 /**
- * Finalize a hash avCodecContext and compute the actual hash value.
+ * Finalize a hash videoCodecContext and compute the actual hash value.
  *
  * The minimum size of `dst` buffer is given by av_hash_get_size() or
  * #AV_HASH_MAX_SIZE. The use of the latter macro is discouraged.
  *
- * It is not safe to update or finalize a hash avCodecContext again, if it has already
+ * It is not safe to update or finalize a hash videoCodecContext again, if it has already
  * been finalized.
  *
- * @param[in,out] ctx Hash avCodecContext
+ * @param[in,out] ctx Hash videoCodecContext
  * @param[out]    dst Where the final hash value will be stored
  *
  * @see av_hash_final_bin() provides an alternative API
@@ -199,25 +199,25 @@ void av_hash_update(struct AVHashContext *ctx, const uint8_t *src, size_t len);
 void av_hash_final(struct AVHashContext *ctx, uint8_t *dst);
 
 /**
- * Finalize a hash avCodecContext and store the actual hash value in a buffer.
+ * Finalize a hash videoCodecContext and store the actual hash value in a buffer.
  *
- * It is not safe to update or finalize a hash avCodecContext again, if it has already
+ * It is not safe to update or finalize a hash videoCodecContext again, if it has already
  * been finalized.
  *
  * If `size` is smaller than the hash size (given by av_hash_get_size()), the
  * hash is truncated; if size is larger, the buffer is padded with 0.
  *
- * @param[in,out] ctx  Hash avCodecContext
+ * @param[in,out] ctx  Hash videoCodecContext
  * @param[out]    dst  Where the final hash value will be stored
  * @param[in]     size Number of bytes to write to `dst`
  */
 void av_hash_final_bin(struct AVHashContext *ctx, uint8_t *dst, int size);
 
 /**
- * Finalize a hash avCodecContext and store the hexadecimal representation of the
+ * Finalize a hash videoCodecContext and store the hexadecimal representation of the
  * actual hash value as a string.
  *
- * It is not safe to update or finalize a hash avCodecContext again, if it has already
+ * It is not safe to update or finalize a hash videoCodecContext again, if it has already
  * been finalized.
  *
  * The string is always 0-terminated.
@@ -225,17 +225,17 @@ void av_hash_final_bin(struct AVHashContext *ctx, uint8_t *dst, int size);
  * If `size` is smaller than `2 * hash_size + 1`, where `hash_size` is the
  * value returned by av_hash_get_size(), the string will be truncated.
  *
- * @param[in,out] ctx  Hash avCodecContext
+ * @param[in,out] ctx  Hash videoCodecContext
  * @param[out]    dst  Where the string will be stored
  * @param[in]     size Maximum number of bytes to write to `dst`
  */
 void av_hash_final_hex(struct AVHashContext *ctx, uint8_t *dst, int size);
 
 /**
- * Finalize a hash avCodecContext and store the Base64 representation of the
+ * Finalize a hash videoCodecContext and store the Base64 representation of the
  * actual hash value as a string.
  *
- * It is not safe to update or finalize a hash avCodecContext again, if it has already
+ * It is not safe to update or finalize a hash videoCodecContext again, if it has already
  * been finalized.
  *
  * The string is always 0-terminated.
@@ -243,16 +243,16 @@ void av_hash_final_hex(struct AVHashContext *ctx, uint8_t *dst, int size);
  * If `size` is smaller than AV_BASE64_SIZE(hash_size), where `hash_size` is
  * the value returned by av_hash_get_size(), the string will be truncated.
  *
- * @param[in,out] ctx  Hash avCodecContext
+ * @param[in,out] ctx  Hash videoCodecContext
  * @param[out]    dst  Where the final hash value will be stored
  * @param[in]     size Maximum number of bytes to write to `dst`
  */
 void av_hash_final_b64(struct AVHashContext *ctx, uint8_t *dst, int size);
 
 /**
- * Free hash avCodecContext and set hash avCodecContext pointer to `NULL`.
+ * Free hash videoCodecContext and set hash videoCodecContext pointer to `NULL`.
  *
- * @param[in,out] ctx  Pointer to hash avCodecContext
+ * @param[in,out] ctx  Pointer to hash videoCodecContext
  */
 void av_hash_freep(struct AVHashContext **ctx);
 

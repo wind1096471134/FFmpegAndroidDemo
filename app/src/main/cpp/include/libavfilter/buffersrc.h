@@ -192,7 +192,7 @@ int av_buffersrc_add_frame(AVFilterContext *ctx, AVFrame *frame);
  *
  * If this function returns an error, the input frame is not touched.
  *
- * @param buffer_src  pointer to a buffer source avCodecContext
+ * @param buffer_src  pointer to a buffer source videoCodecContext
  * @param frame       a frame, or NULL to mark EOF
  * @param flags       a combination of AV_BUFFERSRC_FLAG_*
  * @return            >= 0 in case of success, a negative AVERROR code

@@ -43,7 +43,7 @@
  * @param[in] max the maximum allowed numerator and denominator
  * @param[in] log_offset log level offset which is applied to the log
  * level of log_ctx
- * @param[in] log_ctx parent logging avCodecContext
+ * @param[in] log_ctx parent logging videoCodecContext
  * @return >= 0 on success, a negative error code otherwise
  */
 int av_parse_ratio(AVRational *q, const char *str, int max,

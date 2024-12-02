@@ -256,7 +256,7 @@ int ff_is_multicast_address(struct sockaddr *addr);
  * @param addrlen Third argument of bind().
  * @param timeout Polling timeout in milliseconds.
  * @param h       URLContext providing interrupt check
- *                callback and logging avCodecContext.
+ *                callback and logging videoCodecContext.
  * @return        A non-blocking file descriptor on success
  *                or an AVERROR on failure.
  */
@@ -279,7 +279,7 @@ int ff_listen(int fd, const struct sockaddr *addr, socklen_t addrlen,
  * @param fd      The listening socket file descriptor.
  * @param timeout Polling timeout in milliseconds.
  * @param h       URLContext providing interrupt check
- *                callback and logging avCodecContext.
+ *                callback and logging videoCodecContext.
  * @return        A non-blocking file descriptor on success
  *                or an AVERROR on failure.
  */
@@ -294,7 +294,7 @@ int ff_accept(int fd, int timeout, URLContext *h);
  * @param addrlen  Third argument of connect().
  * @param timeout  Polling timeout in milliseconds.
  * @param h        URLContext providing interrupt check
- *                 callback and logging avCodecContext.
+ *                 callback and logging videoCodecContext.
  * @param will_try_next Whether the caller will try to connect to another
  *                 address for the same host name, affecting the form of
  *                 logged errors.
@@ -326,7 +326,7 @@ void ff_log_net_error(void *ctx, int level, const char* prefix);
  * @param parallel The maximum number of connections to attempt in parallel.
  *                 This is limited to an internal maximum capacity.
  * @param h        URLContext providing interrupt check
- *                 callback and logging avCodecContext.
+ *                 callback and logging videoCodecContext.
  * @param fd       If successful, the connected socket is returned here.
  * @param customize_fd Function that will be called for each socket created,
  *                 to allow the caller to set socket options before calling

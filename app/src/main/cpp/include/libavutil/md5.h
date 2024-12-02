@@ -45,21 +45,21 @@ extern const int av_md5_size;
 struct AVMD5;
 
 /**
- * Allocate an AVMD5 avCodecContext.
+ * Allocate an AVMD5 videoCodecContext.
  */
 struct AVMD5 *av_md5_alloc(void);
 
 /**
  * Initialize MD5 hashing.
  *
- * @param ctx pointer to the function avCodecContext (of size av_md5_size)
+ * @param ctx pointer to the function videoCodecContext (of size av_md5_size)
  */
 void av_md5_init(struct AVMD5 *ctx);
 
 /**
  * Update hash value.
  *
- * @param ctx hash function avCodecContext
+ * @param ctx hash function videoCodecContext
  * @param src input data to update hash with
  * @param len input data length
  */
@@ -68,7 +68,7 @@ void av_md5_update(struct AVMD5 *ctx, const uint8_t *src, size_t len);
 /**
  * Finish hashing and output digest value.
  *
- * @param ctx hash function avCodecContext
+ * @param ctx hash function videoCodecContext
  * @param dst buffer where output digest value is stored
  */
 void av_md5_final(struct AVMD5 *ctx, uint8_t *dst);

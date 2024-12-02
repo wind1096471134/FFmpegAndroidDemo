@@ -7,7 +7,6 @@
 
 #include "VideoDecoder.h"
 #include "VideoEncoder.h"
-#include "AudioDecoder.h"
 #include "string"
 
 #define DEFAULT_VIDEO_FPS 25
@@ -16,7 +15,7 @@
 class MediaController: public IEncodeCallback, public std::enable_shared_from_this<MediaController>{
 private:
     std::shared_ptr<VideoDecoder> videoDecoder = nullptr;
-    std::shared_ptr<AudioDecoder> audioDecoder = nullptr;
+    std::shared_ptr<VideoDecoder> audioDecoder = nullptr;
     std::shared_ptr<VideoEncoder> videoEncoder = nullptr;
     bool videoDecodeEnd = false;
     bool audioDecodeEnd = false;
