@@ -10,18 +10,20 @@
 #include "string"
 
 #define DEFAULT_VIDEO_FPS 25
-#define DEFAULT_VIDEO_DURATION 5
+#define DEFAULT_VIDEO_DURATION 5000
 
 class MediaController: public IEncodeCallback, public std::enable_shared_from_this<MediaController>{
 private:
     std::shared_ptr<VideoDecoder> videoDecoder = nullptr;
     std::shared_ptr<VideoDecoder> audioDecoder = nullptr;
     std::shared_ptr<VideoEncoder> videoEncoder = nullptr;
+    bool singleDecoder = true;//for one inputFile, else for two inputFile
     bool videoDecodeEnd = false;
     bool audioDecodeEnd = false;
-    int encodeDuration = DEFAULT_VIDEO_DURATION;
+    int encodeDurationMs = DEFAULT_VIDEO_DURATION;
     int encodeFps = DEFAULT_VIDEO_FPS;
     int repeatVideoFrameNum = 1;
+    std::string videoOutputPath;
     DecodeVideoCallback mediaDecodeFrameCallback = [&](DecodeFrameData data) {
         onDecodeFrameCallback(data);
     };
@@ -36,6 +38,7 @@ public:
     int encodeImgToVideo(const std::string &imgInputPath, const std::string &videoOutputPath);
     int encodeImgAndAudioToVideo(const std::string &imgInputPath, const std::string &audioInputPath,
                                  const std::string &videoOutputPath);
+    int encodeVideoToVideo(const std::string &videoInputPath, const std::string &videoOutputPath);
 };
 
 #endif //FFMPEGDEMO_MEDIACONTROLLER_H

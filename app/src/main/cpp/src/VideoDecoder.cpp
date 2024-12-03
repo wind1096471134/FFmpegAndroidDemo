@@ -180,6 +180,7 @@ int VideoDecoder::decodeFile(const std::string &inputFilePath, DecodeVideoCallba
 }
 
 void VideoDecoder::stopDecode() {
+    log(LOG_TAG, "stopDecode");
     decoding = false;
 }
 

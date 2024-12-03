@@ -26,46 +26,73 @@ void MediaController::onDecodeFrameCallback(DecodeFrameData &data) {
             audioDecodeEnd = true;
         }
     } else {
+        //log(LOG_TAG, "decode frame", data.mediaType);
         if(data.mediaType == AVMEDIA_TYPE_VIDEO) {
-            for(int simulatePts = 0; simulatePts < repeatVideoFrameNum; simulatePts++) {
-                videoEncoder->encodeFrame({data.avFrame, data.mediaType});
+            if(!videoEncoder->isEncoding()) { //here to get video wh, then encode start.
+                int videoW = data.avFrame->width;
+                int videoH = data.avFrame->height;
+                videoEncoder->encodeStart(videoOutputPath, {true, 3000000, videoW, videoH, DEFAULT_VIDEO_FPS}, {true, 400000, 44100, AV_CHANNEL_LAYOUT_STEREO});
             }
-            if(videoEncoder->getEncodeVideoDuration() >= encodeDuration) {
+            if(videoEncoder->getEncodeVideoDuration() >= encodeDurationMs) {
                 videoDecodeEnd = true;
-                videoDecoder->stopDecode();
+                if(!singleDecoder) {
+                    videoDecoder->stopDecode();
+                }
+            } else {
+                for(int simulatePts = 0; simulatePts < repeatVideoFrameNum; simulatePts++) {
+                    videoEncoder->encodeFrame({data.avFrame, data.mediaType});
+                }
             }
         } else {
-            videoEncoder->encodeFrame({data.avFrame, data.mediaType});
-            if(videoEncoder->getEncodeAudioDuration() >= encodeDuration) {
+            if(videoEncoder->getEncodeAudioDuration() >= encodeDurationMs) {
                 audioDecodeEnd = true;
-                audioDecoder->stopDecode();
+                if(!singleDecoder) {
+                    audioDecoder->stopDecode();
+                }
+            } else {
+                videoEncoder->encodeFrame({data.avFrame, data.mediaType});
             }
         }
     }
     if(videoDecodeEnd && audioDecodeEnd) {
+        videoDecoder->stopDecode();
+        audioDecoder->stopDecode();
         videoEncoder->encodeEnd();
         repeatVideoFrameNum = 1;
         videoDecodeEnd = false;
         audioDecodeEnd = false;
+        singleDecoder = true;
+        this->videoOutputPath.clear();
     }
 }
 
 int MediaController::encodeImgToVideo(const std::string &imgInputPath, const std::string &videoOutputPath) {
-    repeatVideoFrameNum = encodeFps * encodeDuration;//fps * duration
+    this->videoOutputPath = videoOutputPath;
+    repeatVideoFrameNum = encodeFps * encodeDurationMs / 1000;//fps * duration
     audioDecodeEnd = true;//here has no audio, so set it.
+    singleDecoder = true;
     videoEncoder->setEncodeCallback(shared_from_this());
-    videoEncoder->encodeStart(videoOutputPath, {true, 3000000, 512, 512, DEFAULT_VIDEO_FPS}, {false});
     videoDecoder->decodeFile(imgInputPath, mediaDecodeFrameCallback);
     return SUC;
 }
 
 int MediaController::encodeImgAndAudioToVideo(const std::string &imgInputPath, const std::string &audioInputPath,
                                               const std::string &videoOutputPath) {
-    repeatVideoFrameNum = encodeFps * encodeDuration;//fps * duration
+    this->videoOutputPath = videoOutputPath;
+    repeatVideoFrameNum = encodeFps * encodeDurationMs / 1000;//fps * duration
     videoEncoder->setEncodeCallback(shared_from_this());
-    videoEncoder->encodeStart(videoOutputPath, {true, 3000000, 512, 512, DEFAULT_VIDEO_FPS}, {true, 400000, 44100, AV_CHANNEL_LAYOUT_STEREO});
-    audioDecoder->decodeFile(audioInputPath, mediaDecodeFrameCallback);
+    singleDecoder = false;
     videoDecoder->decodeFile(imgInputPath, mediaDecodeFrameCallback);
+    audioDecoder->decodeFile(audioInputPath, mediaDecodeFrameCallback);
+    return SUC;
+}
+
+int MediaController::encodeVideoToVideo(const std::string &videoInputPath,
+                                        const std::string &videoOutputPath) {
+    this->videoOutputPath = videoOutputPath;
+    videoEncoder->setEncodeCallback(shared_from_this());
+    singleDecoder = true;
+    videoDecoder->decodeFile(videoInputPath, mediaDecodeFrameCallback);
     return SUC;
 }
 

@@ -33,12 +33,12 @@ protected:
     int audioStreamId = -1;
     std::atomic<bool> decoding;
 
-    void freeResource();
     int initCodec(AVMediaType mediaType, AVCodecContext *&avCodecContext, const AVCodec *&avCodec, int &streamId);
 public:
     VideoDecoder();
     int decodeFile(const std::string &inputFilePath, DecodeVideoCallback &decodeCallback);
     void stopDecode();
+    void freeResource();
     ~VideoDecoder();
 };
 

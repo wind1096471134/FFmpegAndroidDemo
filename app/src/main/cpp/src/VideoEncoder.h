@@ -54,11 +54,10 @@ private:
     std::atomic<int> audioFrameInputSampleNum;
     std::atomic<int> videoFramePts;
     std::atomic<int> audioFramePts;
-    std::atomic<bool> decodeRunning;
+    std::atomic<bool> encodeRunning;
     BlockingQueue<EncodeFrame> queue;
     std::shared_ptr<IEncodeCallback> encodeCallback = nullptr;
 
-    void freeResource();
     int encodeThreadHandlerLoop(const std::string &outputFile, const VideoEncodeParam &videoEncodeParam, const AudioEncodeParam &audioEncodeParam);
     int encodeFrameInternal(const EncodeFrame &encodeFrame);
 
@@ -71,10 +70,12 @@ public:
     int encodeFrame(const EncodeFrame &encodeFrame);
     //编码结束，数据输入结束必须调用一次
     int encodeEnd();
-    //获取已编码视频流时长（s），非精确值。
+    bool isEncoding();
+    //获取已编码视频流时长（ms），非精确值。
     int getEncodeVideoDuration();
-    //获取已编码音频流时长（s），非精确值。
+    //获取已编码音频流时长（ms），非精确值。
     int getEncodeAudioDuration();
+    void freeResource();
     ~VideoEncoder();
 };
 #endif //FFMPEGDEMO_VIDEOENCODER_H

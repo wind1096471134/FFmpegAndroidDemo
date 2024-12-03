@@ -22,7 +22,7 @@ VideoEncoder::~VideoEncoder() {
 }
 
 int VideoEncoder::encodeStart(const std::string &outputFile, const VideoEncodeParam &videoEncodeParam, const AudioEncodeParam &audioEncodeParam) {
-    decodeRunning.store(true);
+    encodeRunning.store(true);
     this->videoEncodeParam = videoEncodeParam;
     this->audioEncodeParam = audioEncodeParam;
     std::thread thread([&, outputFile]() {
@@ -68,7 +68,6 @@ int VideoEncoder::encodeThreadHandlerLoop(const std::string &outputFile,
             freeResource();
             return FFMPEG_API_FAIL;
         }
-        videoCodecContext->profile = FF_PROFILE_H264_HIGH;
         videoCodecContext->codec_type = AVMEDIA_TYPE_VIDEO;
         videoCodecContext->bit_rate = videoEncodeParam.bitRate;
         videoCodecContext->width = videoEncodeParam.w;
@@ -154,7 +153,7 @@ int VideoEncoder::encodeThreadHandlerLoop(const std::string &outputFile,
     }
 
     //loop and encode frames.
-    while (decodeRunning || !queue.isEmpty()) {
+    while (encodeRunning || !queue.isEmpty()) {
         EncodeFrame encodeFrame = queue.dequeue();
         ret = encodeFrameInternal(encodeFrame);
         av_frame_free(&encodeFrame.avFrame);
@@ -169,11 +168,12 @@ int VideoEncoder::encodeThreadHandlerLoop(const std::string &outputFile,
         freeResource();
         return FFMPEG_API_FAIL;
     }
+    freeResource();
     return SUC;
 }
 
 int VideoEncoder::encodeFrame(const EncodeFrame &encodeFrame) {
-    if(!decodeRunning.load()) {
+    if(!encodeRunning.load()) {
         return ENCODE_ALREADY_FINISH;
     }
     AVFrame *copyFrame = av_frame_clone(encodeFrame.avFrame);
@@ -186,6 +186,8 @@ int VideoEncoder::encodeFrame(const EncodeFrame &encodeFrame) {
     } else if (encodeFrame.mediaType == AVMEDIA_TYPE_AUDIO) {
         audioFrameInputSampleNum += copyFrame->nb_samples;
     }
+    //log(LOG_TAG, "encodeFrame", videoFrameInputNum, audioFrameInputSampleNum);
+
     return SUC;
 }
 
@@ -195,6 +197,7 @@ int VideoEncoder::encodeFrameInternal(const EncodeFrame &encodeFrame) {
     AVCodecContext *avCodecContext = nullptr;
     AVStream *avStream = nullptr;
     if(encodeFrame.mediaType == AVMEDIA_TYPE_VIDEO) {
+        //log(LOG_TAG, "write video frame", videoFramePts);
         //transform data to yuv420p
         SwsContext *swsContext = sws_getContext(
                 avFrame->width, avFrame->height, static_cast<AVPixelFormat>(avFrame->format),
@@ -226,7 +229,7 @@ int VideoEncoder::encodeFrameInternal(const EncodeFrame &encodeFrame) {
         avCodecContext = videoCodecContext;
         avStream = videoStream;
     } else if (encodeFrame.mediaType == AVMEDIA_TYPE_AUDIO) {
-        //log(LOG_TAG, "write audio frame", audioFramePts);
+        log(LOG_TAG, "write audio frame", audioFramePts, getEncodeAudioDuration());
         SwrContext *swrContext = nullptr;
         int ret = swr_alloc_set_opts2(&swrContext, &audioCodecContext->ch_layout, audioCodecContext->sample_fmt, audioCodecContext->sample_rate,
                                       &avFrame->ch_layout, static_cast<AVSampleFormat>(avFrame->format), avFrame->sample_rate, 0,
@@ -293,7 +296,7 @@ int VideoEncoder::encodeFrameInternal(const EncodeFrame &encodeFrame) {
 
 int VideoEncoder::encodeEnd() {
     log(LOG_TAG, "call encodeEnd");
-    decodeRunning.store(false);
+    encodeRunning.store(false);
     return SUC;
 }
 
@@ -333,11 +336,15 @@ void VideoEncoder::setEncodeCallback(std::shared_ptr<IEncodeCallback> encodeCall
 }
 
 int VideoEncoder::getEncodeVideoDuration() {
-    int dur = videoFrameInputNum / videoEncodeParam.load().fps;
+    int dur = videoFrameInputNum  * 1000 / videoEncodeParam.load().fps;
     return dur;
 }
 
 int VideoEncoder::getEncodeAudioDuration() {
-    int dur = audioFrameInputSampleNum / audioEncodeParam.load().sampleRate;
+    int dur = audioFrameInputSampleNum  * 1000 / audioEncodeParam.load().sampleRate;
     return dur;
+}
+
+bool VideoEncoder::isEncoding() {
+    return encodeRunning;
 }

@@ -27,8 +27,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var threadPoolExecutor: ExecutorService
     private val actionList = arrayOf(
-        1 to "图片->视频",
-        2 to "图片+音频->视频"
+        1 to "图片 -> 视频",
+        2 to "图片+音频 -> 视频",
+        3 to "视频 -> 视频"
     )
 
     class CustomViewHolder(
@@ -70,6 +71,9 @@ class MainActivity : AppCompatActivity() {
                     2 -> {
                         encodeImgAndAudioToVideo()
                     }
+                    3 -> {
+                        encodeVideoToVideo()
+                    }
                 }
             }
         }
@@ -101,8 +105,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun encodeImgToVideo() {
         binding.loading.visibility = View.VISIBLE
+        val imgFile = baseContext.filesDir.absolutePath + "/img.png"
+        appendLogText("输入文件：\n$imgFile")
         threadPoolExecutor.execute {
-            val imgFile = baseContext.filesDir.absolutePath + "/img.png"
             saveAssetFileToLocalIfNeed("img.PNG", imgFile)
             val outputFile = baseContext.filesDir.absolutePath + "/imgToVideo.mp4"
             val ret = ffmpegEncodeImgToVideo(imgFile, outputFile)
@@ -111,13 +116,25 @@ class MainActivity : AppCompatActivity() {
 
     private fun encodeImgAndAudioToVideo() {
         binding.loading.visibility = View.VISIBLE
+        val imgFile = baseContext.filesDir.absolutePath + "/img.png"
+        val audioFile = baseContext.filesDir.absolutePath + "/audio.aac"
+        appendLogText("输入文件：\n$imgFile\n$audioFile")
         threadPoolExecutor.execute {
-            val imgFile = baseContext.filesDir.absolutePath + "/img.png"
-            val audioFile = baseContext.filesDir.absolutePath + "/audio.aac"
             saveAssetFileToLocalIfNeed("img.PNG", imgFile)
             saveAssetFileToLocalIfNeed("audio.aac", audioFile)
             val outputFile = baseContext.filesDir.absolutePath + "/imgAndAudioToVideo.mp4"
             val ret = ffmpegEncodeImgAndAudioToVideo(imgFile, audioFile, outputFile)
+        }
+    }
+
+    private fun encodeVideoToVideo() {
+        binding.loading.visibility = View.VISIBLE
+        val videoFile = baseContext.filesDir.absolutePath + "/video.mp4"
+        appendLogText("输入文件：\n$videoFile")
+        threadPoolExecutor.execute {
+            saveAssetFileToLocalIfNeed("video.mp4", videoFile)
+            val outputFile = baseContext.filesDir.absolutePath + "/videoToVideo.mp4"
+            val ret = ffmpegEncodeVideoToVideo(videoFile, outputFile)
         }
     }
 
@@ -145,9 +162,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun resultInUiThread(msg: String) {
         binding.actionList.post {
-            Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
+            appendLogText(msg, false)
             binding.loading.visibility = View.GONE
         }
+    }
+
+    private fun appendLogText(msg: String, clear: Boolean = true) {
+        val showMsg = if(clear) msg else "${binding.msgText.text}\n$msg"
+        binding.msgText.text = showMsg
     }
 
     external fun ffmpegSetNativeCallback(callback: NativeMediaCallback)
@@ -155,6 +177,8 @@ class MainActivity : AppCompatActivity() {
     external fun ffmpegEncodeImgToVideo(imgInputPath: String, outputPath: String): Boolean
 
     external fun ffmpegEncodeImgAndAudioToVideo(imgInputPath: String, audioInputPath: String?, outputPath: String): Boolean
+
+    external fun ffmpegEncodeVideoToVideo(videoInputPath: String, outputPath: String): Boolean
 
     companion object {
         // Used to load the 'ffmpegdemo' library on application startup.

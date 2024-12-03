@@ -41,7 +41,8 @@ public:
         isProcessing = false;
     }
 };
-int encodeImgToVideo(const std::string &imgInputPath, const std::string &videoOutputPath) {
+
+int initMediaControllerIfNeed() {
     std::lock_guard<std::mutex> lock(mutex);
     if(isProcessing) {
         return PROCESSING;
@@ -50,24 +51,35 @@ int encodeImgToVideo(const std::string &imgInputPath, const std::string &videoOu
         mediaController = std::make_shared<MediaController>();
         mediaController->setEncodeCallback(std::make_shared<MyIEncodeCallback>());
     }
-    mediaController->encodeImgToVideo(imgInputPath, videoOutputPath);
-    isProcessing = true;
     return SUC;
+}
+
+int encodeImgToVideo(const std::string &imgInputPath, const std::string &videoOutputPath) {
+    int ret = initMediaControllerIfNeed();
+    if(ret == SUC) {
+        ret = mediaController->encodeImgToVideo(imgInputPath, videoOutputPath);
+        isProcessing = true;
+    }
+    return ret;
 }
 
 int encodeImgAndAudioToVideo(const std::string &imgInputPath, const std::string &audioInputPath,
                              const std::string &videoOutputPath) {
-    std::lock_guard<std::mutex> lock(mutex);
-    if(isProcessing) {
-        return PROCESSING;
+    int ret = initMediaControllerIfNeed();
+    if(ret == SUC) {
+        ret = mediaController->encodeImgAndAudioToVideo(imgInputPath, audioInputPath, videoOutputPath);
+        isProcessing = true;
     }
-    if(mediaController == nullptr) {
-        mediaController = std::make_shared<MediaController>();
-        mediaController->setEncodeCallback(std::make_shared<MyIEncodeCallback>());
+    return ret;
+}
+
+int encodeVideoToVideo(const std::string &videoInputPath, const std::string &videoOutputPath) {
+    int ret = initMediaControllerIfNeed();
+    if(ret == SUC) {
+        ret = mediaController->encodeVideoToVideo(videoInputPath, videoOutputPath);
+        isProcessing = true;
     }
-    mediaController->encodeImgAndAudioToVideo(imgInputPath, audioInputPath, videoOutputPath);
-    isProcessing = true;
-    return SUC;
+    return ret;
 }
 
 // JNI_OnLoad 函数
@@ -121,4 +133,16 @@ Java_com_example_ffmpegdemo_MainActivity_ffmpegSetNativeCallback(JNIEnv *env, jo
     if(callback != nullptr) {
         nativeMediaCallback = env->NewGlobalRef(callback);
     }
+}
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_example_ffmpegdemo_MainActivity_ffmpegEncodeVideoToVideo(JNIEnv *env, jobject thiz,
+                                                                  jstring video_input_path,
+                                                                  jstring output_path) {
+    const char* inputPath = env->GetStringUTFChars(video_input_path, nullptr);
+    const char* outputPath = env->GetStringUTFChars(output_path, nullptr);
+    int ret = encodeVideoToVideo(std::string(inputPath), std::string(outputPath));
+    env->ReleaseStringUTFChars(video_input_path, inputPath);
+    env->ReleaseStringUTFChars(output_path, outputPath);
+    return ret == 0;
 }
