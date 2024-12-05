@@ -1,5 +1,6 @@
 package com.example.ffmpegdemo
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -29,7 +30,8 @@ class MainActivity : AppCompatActivity() {
     private val actionList = arrayOf(
         1 to "图片 -> 视频",
         2 to "图片+音频 -> 视频",
-        3 to "视频 -> 视频"
+        3 to "视频 -> 视频",
+        4 to "播放本地视频"
     )
 
     class CustomViewHolder(
@@ -73,6 +75,9 @@ class MainActivity : AppCompatActivity() {
                     }
                     3 -> {
                         encodeVideoToVideo()
+                    }
+                    4 -> {
+                        playLocalVideo()
                     }
                 }
             }
@@ -135,6 +140,21 @@ class MainActivity : AppCompatActivity() {
             saveAssetFileToLocalIfNeed("video.mp4", videoFile)
             val outputFile = baseContext.filesDir.absolutePath + "/videoToVideo.mp4"
             val ret = ffmpegEncodeVideoToVideo(videoFile, outputFile)
+        }
+    }
+
+    private fun playLocalVideo() {
+        binding.loading.visibility = View.VISIBLE
+        threadPoolExecutor.execute {
+            val videoFile = baseContext.filesDir.absolutePath + "/video.mp4"
+            saveAssetFileToLocalIfNeed("video.mp4", videoFile)
+            binding.loading.post {
+                binding.loading.visibility = View.GONE
+                val intent = Intent(baseContext, PlayerActivity::class.java).apply {
+                    putExtra(PlayerActivity.FILE_URL, videoFile)
+                }
+                startActivity(intent)
+            }
         }
     }
 

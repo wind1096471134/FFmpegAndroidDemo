@@ -1,8 +1,10 @@
 #include <jni.h>
 #include <string>
 #include "MediaController.h"
+#include "MediaPlayer.h"
 #include "Error.h"
 #include "Util.h"
+#include "android/native_window_jni.h"
 
 //static val
 JavaVM* gJavaVM = nullptr;
@@ -82,6 +84,17 @@ int encodeVideoToVideo(const std::string &videoInputPath, const std::string &vid
     return ret;
 }
 
+std::shared_ptr<MediaPlayer> mediaPlayer = nullptr;
+std::mutex mutexPlayer;
+void playVideo(const std::string &videoInputPath, ANativeWindow *nativeWindow) {
+    std::lock_guard<std::mutex> lockGuard(mutexPlayer);
+    if(mediaPlayer == nullptr) {
+        mediaPlayer = std::make_shared<MediaPlayer>();
+    }
+    mediaPlayer->setPlayWindow(nativeWindow);
+    mediaPlayer->play(const_cast<std::string &>(videoInputPath));
+}
+
 // JNI_OnLoad 函数
 jint JNI_OnLoad(JavaVM* vm, void* reserved) {
     // 保存 JavaVM 指针到全局变量
@@ -134,6 +147,7 @@ Java_com_example_ffmpegdemo_MainActivity_ffmpegSetNativeCallback(JNIEnv *env, jo
         nativeMediaCallback = env->NewGlobalRef(callback);
     }
 }
+
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_com_example_ffmpegdemo_MainActivity_ffmpegEncodeVideoToVideo(JNIEnv *env, jobject thiz,
@@ -145,4 +159,24 @@ Java_com_example_ffmpegdemo_MainActivity_ffmpegEncodeVideoToVideo(JNIEnv *env, j
     env->ReleaseStringUTFChars(video_input_path, inputPath);
     env->ReleaseStringUTFChars(output_path, outputPath);
     return ret == 0;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_ffmpegdemo_PlayerActivity_ffmpegPlayVideo(JNIEnv *env, jobject thiz,
+                                                           jstring file_url, jobject surface) {
+    const char* inputPath = env->GetStringUTFChars(file_url, nullptr);
+    ANativeWindow *nativeWindow = ANativeWindow_fromSurface(env, surface);
+    playVideo(std::string(inputPath), nativeWindow);
+    ANativeWindow_release(nativeWindow);
+    env->ReleaseStringUTFChars(file_url, inputPath);
+}
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_ffmpegdemo_PlayerActivity_ffmpegPlayRelease(JNIEnv *env, jobject thiz) {
+    std::lock_guard<std::mutex> lockGuard(mutexPlayer);
+    if(mediaPlayer != nullptr) {
+        mediaPlayer->release();
+        mediaPlayer = nullptr;
+    }
 }

@@ -14,13 +14,30 @@ extern "C"{
 #include "functional"
 #include "string"
 
+//frame data
 struct DecodeFrameData {
-    int frameIndex; //[0,n]
     AVMediaType mediaType; //1:Video; 2:Audio
     AVFrame *avFrame;
-    bool isFinish;
+    bool isFinish; //if true, avFrame is null
 };
-using DecodeVideoCallback = std::function<void(DecodeFrameData data)>;
+//meta data
+struct DecodeMetaData {
+    AVMediaType mediaType;
+    //for video
+    int w;
+    int h;
+    int fps; //avg value
+    //for audio
+    int sampleRate;
+    AVChannelLayout channelLayout;
+};
+
+class IVideoDecodeCallback {
+public:
+    virtual ~IVideoDecodeCallback() = default;
+    virtual void onDecodeMetaData(DecodeMetaData data) = 0;
+    virtual void onDecodeFrameData(DecodeFrameData data) = 0;
+};
 
 class VideoDecoder{
 protected:
@@ -30,14 +47,21 @@ protected:
     int videoStreamId = -1;
     AVCodecContext  *audioCodecContext = nullptr;
     const AVCodec *audioCodec = nullptr;
+    std::string filePath;
     int audioStreamId = -1;
     std::atomic<bool> decoding;
+    std::shared_ptr<IVideoDecodeCallback> videoDecodeCallback = nullptr;
+    bool hasCallbackVideoMetaData = false;
+    bool hasCallbackAudioMetaData = false;
 
     int initCodec(AVMediaType mediaType, AVCodecContext *&avCodecContext, const AVCodec *&avCodec, int &streamId);
 public:
     VideoDecoder();
-    int decodeFile(const std::string &inputFilePath, DecodeVideoCallback &decodeCallback);
+    void setVideoDecodeCallback(std::shared_ptr<IVideoDecodeCallback> videoDecodeCallback);
+    int decodeFile(const std::string &inputFilePath);
     void stopDecode();
+    bool isDecoding();
+    std::string& getDecodeFilePath();
     void freeResource();
     ~VideoDecoder();
 };

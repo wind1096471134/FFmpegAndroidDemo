@@ -229,7 +229,7 @@ int VideoEncoder::encodeFrameInternal(const EncodeFrame &encodeFrame) {
         avCodecContext = videoCodecContext;
         avStream = videoStream;
     } else if (encodeFrame.mediaType == AVMEDIA_TYPE_AUDIO) {
-        log(LOG_TAG, "write audio frame", audioFramePts, getEncodeAudioDuration());
+        //log(LOG_TAG, "write audio frame", audioFramePts, getEncodeAudioDuration());
         SwrContext *swrContext = nullptr;
         int ret = swr_alloc_set_opts2(&swrContext, &audioCodecContext->ch_layout, audioCodecContext->sample_fmt, audioCodecContext->sample_rate,
                                       &avFrame->ch_layout, static_cast<AVSampleFormat>(avFrame->format), avFrame->sample_rate, 0,

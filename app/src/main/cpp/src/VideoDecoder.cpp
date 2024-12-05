@@ -31,6 +31,8 @@ void VideoDecoder::freeResource() {
     audioCodec = nullptr;
     videoStreamId = -1;
     audioStreamId = -1;
+    hasCallbackAudioMetaData = false;
+    hasCallbackVideoMetaData = false;
 }
 
 int VideoDecoder::initCodec(AVMediaType mediaType, AVCodecContext *&avCodecContext,
@@ -83,6 +85,8 @@ int VideoDecoder::initCodec(AVMediaType mediaType, AVCodecContext *&avCodecConte
         clearRes();
         return FFMPEG_API_FAIL;
     }
+    avCodecContext->time_base = avFormatContext->streams[streamId]->time_base;
+
     //open videoCodec
     ret = avcodec_open2(avCodecContext, avCodec, nullptr);
     if(ret < 0){
@@ -90,16 +94,18 @@ int VideoDecoder::initCodec(AVMediaType mediaType, AVCodecContext *&avCodecConte
         log(LOG_TAG, "avcodec_open2", ret);
         return FFMPEG_API_FAIL;
     }
+
     return SUC;
 }
 
-int VideoDecoder::decodeFile(const std::string &inputFilePath, DecodeVideoCallback &decodeCallback) {
+int VideoDecoder::decodeFile(const std::string &inputFilePath) {
     freeResource();
     decoding = true;
-    std::thread thread([&, inputFilePath](){
-        log(LOG_TAG, "decodeFile start ", inputFilePath.data());
+    this->filePath = inputFilePath;
+    std::thread thread([&](){
+        log(LOG_TAG, "decodeFile start ", filePath.data());
         //open input
-        int ret = avformat_open_input(&avFormatContext, inputFilePath.data(), nullptr, nullptr);
+        int ret = avformat_open_input(&avFormatContext, filePath.data(), nullptr, nullptr);
         if(ret < 0){
             log(LOG_TAG, "avformat_open_input fail", ret);
             freeResource();
@@ -107,8 +113,29 @@ int VideoDecoder::decodeFile(const std::string &inputFilePath, DecodeVideoCallba
         }
         //init videoCodec
         int videoRet = initCodec(AVMEDIA_TYPE_VIDEO, videoCodecContext, videoCodec, videoStreamId);
+        if(videoRet == SUC) { //callback meta data
+            if(videoCodecContext->width > 0 && videoCodecContext->height > 0) { //if no meta data, wait it from avFrame
+                if(videoDecodeCallback != nullptr) {
+                    DecodeMetaData metaData = {AVMEDIA_TYPE_VIDEO, videoCodecContext->width, videoCodecContext->height,
+                                               av_guess_frame_rate(avFormatContext, avFormatContext->streams[videoStreamId],
+                                                                   nullptr).num};
+                    videoDecodeCallback->onDecodeMetaData(metaData);
+                }
+                hasCallbackVideoMetaData = true;
+            }
+        }
         //init audioCodec
         int audioRet = initCodec(AVMEDIA_TYPE_AUDIO, audioCodecContext, audioCodec, audioStreamId);
+        if(audioRet == SUC) { //callback meta data
+            if(audioCodecContext->sample_rate > 0) { //if no meta data, wait it from avFrame
+                if(videoDecodeCallback != nullptr) {
+                    DecodeMetaData metaData = {AVMEDIA_TYPE_AUDIO, 0, 0, 0,
+                                               audioCodecContext->sample_rate, audioCodecContext->ch_layout};
+                    videoDecodeCallback->onDecodeMetaData(metaData);
+                }
+                hasCallbackAudioMetaData = true;
+            }
+        }
         if(videoRet != SUC && audioRet != SUC) {
             freeResource();
             return FFMPEG_API_FAIL;
@@ -119,7 +146,6 @@ int VideoDecoder::decodeFile(const std::string &inputFilePath, DecodeVideoCallba
         AVFrame *videoFrame = av_frame_alloc();
         AVFrame *audioFrame = av_frame_alloc();
 
-        int frameCount = 0;
         while(decoding) {
             av_packet_unref(avPacket);
             ret = av_read_frame(avFormatContext, avPacket);
@@ -127,11 +153,11 @@ int VideoDecoder::decodeFile(const std::string &inputFilePath, DecodeVideoCallba
                 AVCodecContext *avCodecContext = nullptr;
                 AVMediaType mediaType;
                 AVFrame *avFrame;
-                if(avPacket->stream_index == videoStreamId) {
+                if(avPacket->stream_index == videoStreamId) { //video packet
                     avCodecContext = videoCodecContext;
                     mediaType = AVMEDIA_TYPE_VIDEO;
                     avFrame = videoFrame;
-                } else if (avPacket->stream_index == audioStreamId) {
+                } else if (avPacket->stream_index == audioStreamId) { //audio packet
                     avCodecContext = audioCodecContext;
                     mediaType = AVMEDIA_TYPE_AUDIO;
                     avFrame = audioFrame;
@@ -146,9 +172,24 @@ int VideoDecoder::decodeFile(const std::string &inputFilePath, DecodeVideoCallba
                             log(LOG_TAG, "avcodec_receive_frame fail", ret);
                             break;
                         }
-                        DecodeFrameData frameData = {frameCount, mediaType, avFrame, false};
-                        decodeCallback(frameData);
-                        frameCount++;
+                        if(videoDecodeCallback != nullptr) {
+                            if(!hasCallbackVideoMetaData && mediaType == AVMEDIA_TYPE_VIDEO) {
+                                DecodeMetaData metaData = {AVMEDIA_TYPE_VIDEO, avFrame->width, avFrame->height,
+                                                           av_guess_frame_rate(avFormatContext, avFormatContext->streams[videoStreamId],avFrame).num};
+                                videoDecodeCallback->onDecodeMetaData(metaData);
+                                hasCallbackVideoMetaData = true;
+                            } else if (!hasCallbackAudioMetaData && mediaType == AVMEDIA_TYPE_AUDIO) {
+                                DecodeMetaData metaData = {AVMEDIA_TYPE_AUDIO, 0, 0, 0,
+                                                           avFrame->sample_rate, avFrame->ch_layout};
+                                videoDecodeCallback->onDecodeMetaData(metaData);
+                                hasCallbackAudioMetaData = true;
+                            }
+                            if(avFrame->time_base.num == 0) {
+                                avFrame->time_base = avCodecContext->time_base;
+                            }
+                            DecodeFrameData frameData = { mediaType, avFrame, false};
+                            videoDecodeCallback->onDecodeFrameData(frameData);
+                        }
 
                     } else {
                         log(LOG_TAG, "avcodec_send_packet fail", ret);
@@ -163,15 +204,19 @@ int VideoDecoder::decodeFile(const std::string &inputFilePath, DecodeVideoCallba
         av_packet_free(&avPacket);
         av_frame_free(&videoFrame);
         av_frame_free(&audioFrame);
-        if(videoStreamId >= 0) {
-            decodeCallback({-1, AVMEDIA_TYPE_VIDEO, nullptr, true});
-        }
-        if(audioStreamId >= 0) {
-            decodeCallback({-1, AVMEDIA_TYPE_AUDIO, nullptr, true});
+        if(videoDecodeCallback != nullptr) {
+            if(videoStreamId >= 0) {
+                DecodeFrameData frameData = {AVMEDIA_TYPE_VIDEO, nullptr, true};
+                videoDecodeCallback->onDecodeFrameData(frameData);
+            }
+            if(audioStreamId >= 0) {
+                DecodeFrameData frameData = {AVMEDIA_TYPE_AUDIO, nullptr, true};
+                videoDecodeCallback->onDecodeFrameData(frameData);
+            }
         }
         freeResource();
 
-        log(LOG_TAG, "decodeFile end", inputFilePath.data());
+        log(LOG_TAG, "decodeFile end", filePath.data());
 
         return SUC;
     });
@@ -186,4 +231,17 @@ void VideoDecoder::stopDecode() {
 
 VideoDecoder::VideoDecoder() {
 
+}
+
+bool VideoDecoder::isDecoding() {
+    return decoding;
+}
+
+std::string& VideoDecoder::getDecodeFilePath() {
+    return filePath;
+}
+
+void
+VideoDecoder::setVideoDecodeCallback(std::shared_ptr<IVideoDecodeCallback> videoDecodeCallback) {
+    this->videoDecodeCallback = videoDecodeCallback;
 }
