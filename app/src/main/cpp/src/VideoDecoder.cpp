@@ -229,7 +229,7 @@ void VideoDecoder::stopDecode() {
     decoding = false;
 }
 
-VideoDecoder::VideoDecoder() {
+VideoDecoder::VideoDecoder(): decoding(false) {
 
 }
 

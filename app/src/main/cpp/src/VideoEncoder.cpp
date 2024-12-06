@@ -14,7 +14,9 @@ extern "C" {
 
 #define LOG_TAG "VideoEncoder"
 
-VideoEncoder::VideoEncoder() {
+VideoEncoder::VideoEncoder(): queue(), encodeRunning(false), audioFrameInputSampleNum(0),
+                              videoFrameInputNum(0), audioFramePts(0), videoFramePts(0),
+                              videoEncodeParam(), audioEncodeParam() {
 }
 
 VideoEncoder::~VideoEncoder() {

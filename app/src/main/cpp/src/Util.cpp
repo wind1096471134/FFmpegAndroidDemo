@@ -5,6 +5,7 @@
 #include "Util.h"
 #include "cstring"
 #include "android/log.h"
+#include "chrono"
 
 bool strEndWith(const char *originStr, const char * suffix) {
     size_t originL = strlen(originStr);
@@ -25,3 +26,10 @@ int64_t rescaleTimestamp(int64_t ts, AVRational tb_src, AVRational tb_dst) {
 
     return new_ts;
 }
+
+long long getCurTimestamp() {
+    auto now = std::chrono::system_clock::now().time_since_epoch();
+    return std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
+}
+
+

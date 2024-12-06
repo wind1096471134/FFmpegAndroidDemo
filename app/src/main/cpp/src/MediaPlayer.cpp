@@ -4,6 +4,8 @@
 
 #include "MediaPlayer.h"
 #include "Util.h"
+#include "thread"
+#include "chrono"
 extern "C" {
 #include "libswscale/swscale.h"
 #include "libswresample/swresample.h"
@@ -12,12 +14,52 @@ extern "C" {
 #define LOG_TAG "MediaPlayer"
 
 void MediaPlayer::play(std::string& playUrl) {
-    if(videoDecoder->getDecodeFilePath() != playUrl) {
-        videoDecoder->stopDecode();
-        videoDecoder = std::make_shared<VideoDecoder>();
-        videoDecoder->setVideoDecodeCallback(shared_from_this());
+    if(playStatus == PLAY) {
+        return;
     }
+    videoDecoder->setVideoDecodeCallback(shared_from_this());
     videoDecoder->decodeFile(playUrl);
+    playStatus = PLAY;
+    //render thread
+    std::thread videoRenderThread([&]() {
+        log(LOG_TAG, "videoRenderThread start");
+        try{
+            while(playStatus == PLAY) {
+                AVFrame *frame = videoFrames.dequeue();
+                //calculate and delay render if need.
+                auto curTimestamp = getCurTimestamp();
+                long long realShowDiff = curTimestamp - videoLastShowTimestamp;
+                int64_t ptsDiff = frame->pts - videoLastPts;
+                double ptsDuration = 1000 * av_q2d(av_mul_q({static_cast<int>(ptsDiff), 1}, frame->time_base));
+                int delay = ptsDuration - realShowDiff;
+
+                if(delay > 0) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+                }
+
+                ANativeWindow_Buffer buffer;
+                int ret = ANativeWindow_lock(nativeWindow, &buffer, nullptr);
+                if(ret == 0) {
+                    uint8_t *dstBuffer = (uint8_t *) buffer.bits;
+                    int dstStride = buffer.stride * 4;
+                    int srcStride = frame->linesize[0];
+                    for (int h = 0; h < frame->height; h++) {
+                        memcpy(dstBuffer + h * dstStride, frame->data[0] + h * srcStride, srcStride);
+                    }
+                    ret = ANativeWindow_unlockAndPost(nativeWindow);
+                }
+
+                videoLastPts = frame->pts;
+                videoLastShowTimestamp = getCurTimestamp();
+                av_frame_free(&frame);
+            }
+        } catch (const std::runtime_error& e) {
+            log(LOG_TAG, e.what());
+        }
+
+        log(LOG_TAG, "videoRenderThread end");
+    });
+    videoRenderThread.detach();
 }
 
 void MediaPlayer::setPlayWindow(ANativeWindow *nativeWindow) {
@@ -29,14 +71,26 @@ void MediaPlayer::setPlayWindow(ANativeWindow *nativeWindow) {
 }
 
 void MediaPlayer::release() {
-    videoDecoder->stopDecode();
+    clearData();
     if(this->nativeWindow != nullptr) {
         ANativeWindow_release(this->nativeWindow);
         this->nativeWindow = nullptr;
     }
 }
 
-MediaPlayer::MediaPlayer() {
+void MediaPlayer::clearData() {
+    videoDecoder->stopDecode();
+    playStatus = DESTROY;
+    while(!videoFrames.isEmpty()) {
+        AVFrame *frame = videoFrames.dequeue();
+        av_frame_free(&frame);
+    }
+    videoFrames.shutdown();
+    videoLastPts = 0;
+    videoLastShowTimestamp = 0;
+}
+
+MediaPlayer::MediaPlayer(): videoFrames(30), playStatus(INIT){
     videoDecoder = std::make_shared<VideoDecoder>();
 }
 
@@ -58,20 +112,11 @@ void MediaPlayer::playVideoFrame(AVFrame *avFrame) {
     int ret = sws_scale_frame(context, dstFrame, avFrame);
     if(ret >= 0) {
         av_frame_copy_props(dstFrame, avFrame);
-        ANativeWindow_Buffer buffer;
-        ret = ANativeWindow_lock(nativeWindow, &buffer, nullptr);
-        if(ret == 0) {
-            uint8_t *dstBuffer = (uint8_t *)buffer.bits;
-            int dstStride = buffer.stride * 4;
-            int srcStride = dstFrame->linesize[0];
-            for (int h = 0; h < dstFrame->height; h++) {
-                memcpy(dstBuffer + h * dstStride, dstFrame->data[0] + h * srcStride, srcStride);
-            }
-            ret = ANativeWindow_unlockAndPost(nativeWindow);
-            //log(LOG_TAG, "drawToWindow", avFrame->pts);
+        if(dstFrame->best_effort_timestamp > 0) {
+            dstFrame->pts = dstFrame->best_effort_timestamp;
         }
+        videoFrames.enqueue(dstFrame);
     }
-    av_frame_free(&dstFrame);
     sws_freeContext(context);
 }
 

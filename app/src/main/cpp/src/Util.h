@@ -13,6 +13,7 @@ extern "C" {
 
 int64_t rescaleTimestamp(int64_t ts, AVRational tb_src, AVRational tb_dst);
 bool strEndWith(const char *originStr, const char * suffix);
+long long getCurTimestamp();
 void log(const char *tag, const char *msg, int ret1 = 0, int re2 = 0);
 void log(const char *tag, const char *msg, const char *ret1, int ret2 = 0);
 
