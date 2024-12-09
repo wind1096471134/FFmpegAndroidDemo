@@ -30,6 +30,7 @@ struct DecodeMetaData {
     //for audio
     int sampleRate;
     AVChannelLayout channelLayout;
+    AVSampleFormat sampleFormat;
 };
 
 class IVideoDecodeCallback {

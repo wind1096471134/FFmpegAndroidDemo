@@ -5,11 +5,7 @@ import android.text.TextUtils
 import android.util.Log
 import android.view.Surface
 import android.view.SurfaceHolder
-import android.view.SurfaceView
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import com.example.ffmpegdemo.databinding.ActivityPlayerBinding
 
 class PlayerActivity : AppCompatActivity() {
@@ -23,6 +19,7 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
     private lateinit var binding: ActivityPlayerBinding
+    private val nativeAudioTrack = NativeAudioTrack()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,7 +34,7 @@ class PlayerActivity : AppCompatActivity() {
             override fun surfaceCreated(holder: SurfaceHolder) {
                 Log.i(TAG, "surfaceCreated")
                 //play video
-                ffmpegPlayVideo(fileUrl!!, holder.surface)
+                ffmpegPlayVideo(fileUrl!!, holder.surface, nativeAudioTrack)
             }
 
             override fun surfaceChanged(
@@ -51,6 +48,7 @@ class PlayerActivity : AppCompatActivity() {
 
             override fun surfaceDestroyed(holder: SurfaceHolder) {
                 Log.i(TAG, "surfaceDestroyed")
+                ffmpegPlayRelease()
             }
         })
     }
@@ -60,7 +58,7 @@ class PlayerActivity : AppCompatActivity() {
         ffmpegPlayRelease()
     }
 
-    external fun ffmpegPlayVideo(fileUrl: String, surface: Surface)
+    external fun ffmpegPlayVideo(fileUrl: String, surface: Surface, audioTrack: NativeAudioTrack)
 
     external fun ffmpegPlayRelease()
 }

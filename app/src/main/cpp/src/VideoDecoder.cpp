@@ -130,7 +130,8 @@ int VideoDecoder::decodeFile(const std::string &inputFilePath) {
             if(audioCodecContext->sample_rate > 0) { //if no meta data, wait it from avFrame
                 if(videoDecodeCallback != nullptr) {
                     DecodeMetaData metaData = {AVMEDIA_TYPE_AUDIO, 0, 0, 0,
-                                               audioCodecContext->sample_rate, audioCodecContext->ch_layout};
+                                               audioCodecContext->sample_rate, audioCodecContext->ch_layout,
+                                               audioCodecContext->sample_fmt};
                     videoDecodeCallback->onDecodeMetaData(metaData);
                 }
                 hasCallbackAudioMetaData = true;

@@ -7,6 +7,7 @@
 
 #include "queue"
 #include "mutex"
+#include "stdexcept"
 
 template<typename T>
 class BlockingQueue {
@@ -36,9 +37,6 @@ template<typename T>
 void BlockingQueue<T>::enqueue(const T &item) {
     std::unique_lock<std::mutex> lock(mutex);
     notFull.wait(lock, [this] {return isShutdown || queue.size() < capacity;});
-    if (isShutdown && queue.size() >= capacity) {
-        throw std::runtime_error("BlockingQueue is shutdown");
-    }
     queue.push(item);
     notEmpty.notify_all();
 }
@@ -47,9 +45,6 @@ template<typename T>
 T BlockingQueue<T>::dequeue() {
     std::unique_lock<std::mutex> lock(mutex);
     notEmpty.wait(lock, [this]{ return isShutdown || !queue.empty();});
-    if (isShutdown && queue.empty()) {
-        throw std::runtime_error("BlockingQueue is shutdown");
-    }
     T item = queue.front();
     queue.pop();
     notFull.notify_all();

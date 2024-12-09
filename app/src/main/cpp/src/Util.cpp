@@ -32,4 +32,3 @@ long long getCurTimestamp() {
     return std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
 }
 
-

@@ -10,6 +10,7 @@
 #include "VideoDecoder.h"
 #include "BlockingQueue.h"
 #include "atomic"
+#include "NativeAudioTrackWrapper.h"
 
 enum PlayStatus {
     INIT,
@@ -23,10 +24,12 @@ private:
     ANativeWindow *nativeWindow = nullptr;
     std::shared_ptr<VideoDecoder> videoDecoder = nullptr;
     std::shared_ptr<IVideoDecodeCallback> mediaDecodeCallback = nullptr;
+    std::shared_ptr<NativeAudioTrackWrapper> audioTrack = nullptr;
     BlockingQueue<AVFrame*> videoFrames;
+    BlockingQueue<AVFrame*> audioFrames;
     std::atomic<PlayStatus> playStatus;
-    int64_t videoLastPts = 0;
-    long long videoLastShowTimestamp = 0;
+    AVSampleFormat targetSampleFormat;
+    AVChannelLayout targetChLayout;
 
     void onDecodeMetaData(DecodeMetaData data) override;
     void onDecodeFrameData(DecodeFrameData data) override;
@@ -38,6 +41,7 @@ public:
     ~MediaPlayer() override;
     void play(std::string& playUrl);
     void setPlayWindow(ANativeWindow *nativeWindow);
+    void setAudioTrack(std::shared_ptr<NativeAudioTrackWrapper> audioTrackPtr);
     void release();
 };
 

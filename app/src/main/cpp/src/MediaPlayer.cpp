@@ -24,8 +24,13 @@ void MediaPlayer::play(std::string& playUrl) {
     std::thread videoRenderThread([&]() {
         log(LOG_TAG, "videoRenderThread start");
         try{
-            while(playStatus == PLAY) {
+            int64_t videoLastPts = 0;
+            long long videoLastShowTimestamp = 0;
+            while(playStatus != DESTROY) {
                 AVFrame *frame = videoFrames.dequeue();
+                if(frame == nullptr) {
+                    continue;
+                }
                 //calculate and delay render if need.
                 auto curTimestamp = getCurTimestamp();
                 long long realShowDiff = curTimestamp - videoLastShowTimestamp;
@@ -53,13 +58,23 @@ void MediaPlayer::play(std::string& playUrl) {
                 videoLastShowTimestamp = getCurTimestamp();
                 av_frame_free(&frame);
             }
-        } catch (const std::runtime_error& e) {
-            log(LOG_TAG, e.what());
+        } catch (const std::exception& e) { //not work?
+            log(LOG_TAG , e.what());
         }
 
         log(LOG_TAG, "videoRenderThread end");
     });
     videoRenderThread.detach();
+
+    //render thread
+    std::thread audioPlayThread([&]() {
+        log(LOG_TAG, "audioPlayThread start");
+        while(playStatus != DESTROY) {
+
+        }
+        log(LOG_TAG, "audioPlayThread start");
+    });
+    audioPlayThread.detach();
 }
 
 void MediaPlayer::setPlayWindow(ANativeWindow *nativeWindow) {
@@ -86,8 +101,6 @@ void MediaPlayer::clearData() {
         av_frame_free(&frame);
     }
     videoFrames.shutdown();
-    videoLastPts = 0;
-    videoLastShowTimestamp = 0;
 }
 
 MediaPlayer::MediaPlayer(): videoFrames(30), playStatus(INIT){
@@ -121,18 +134,70 @@ void MediaPlayer::playVideoFrame(AVFrame *avFrame) {
 }
 
 void MediaPlayer::playAudioFrame(AVFrame *avFrame) {
+    if(audioTrack != nullptr) {
+        AVFrame *dstFrame = avFrame;
+        if(avFrame->format != targetSampleFormat ||
+                av_channel_layout_compare(&targetChLayout, &(avFrame->ch_layout)) != 0) {
+            //transform audio format
+            SwrContext *swrContext = nullptr;
+            int ret = swr_alloc_set_opts2(&swrContext, &targetChLayout, targetSampleFormat, avFrame->sample_rate,
+                                          &avFrame->ch_layout, static_cast<AVSampleFormat>(avFrame->format), avFrame->sample_rate, 0,
+                                          nullptr);
+            if(ret < 0 || swr_init(swrContext) < 0) {
+                log(LOG_TAG, "swr_alloc_set_opts2 fail", ret);
+                return;
+            }
+            AVFrame *audioFrame = av_frame_alloc();
+            audioFrame->ch_layout = targetChLayout;
+            audioFrame->format = targetSampleFormat;
+            audioFrame->sample_rate = avFrame->sample_rate;
+            audioFrame->time_base = avFrame->time_base;
 
+            av_frame_get_buffer(audioFrame, 0);
+            ret = swr_convert_frame(swrContext, audioFrame, avFrame);
+            swr_free(&swrContext);
+            if(ret < 0) {
+                log(LOG_TAG, "swr_alloc_set_opts2 fail", ret);
+                return;
+            }
+            dstFrame = audioFrame;
+        }
+        audioTrack->playFrame(dstFrame->data[0], dstFrame->linesize[0]);
+    }
 }
 
 void MediaPlayer::onDecodeMetaData(DecodeMetaData data) {
     if(data.mediaType == AVMEDIA_TYPE_VIDEO) {
         int ret = ANativeWindow_setBuffersGeometry(nativeWindow, data.w, data.h, WINDOW_FORMAT_RGBA_8888);
         log(LOG_TAG, "ANativeWindow_setBuffersGeometry", ret);
+    } else if (data.mediaType == AVMEDIA_TYPE_AUDIO) {
+        if(audioTrack != nullptr) {
+            int channelConfig;
+            const AVChannelLayout stereo = AV_CHANNEL_LAYOUT_STEREO;
+            const AVChannelLayout mono = AV_CHANNEL_LAYOUT_MONO;
+            if(av_channel_layout_compare(&stereo, &(data.channelLayout)) == 0) {
+                channelConfig = 2;
+                targetChLayout = stereo;
+            } else if (av_channel_layout_compare(&mono, &(data.channelLayout)) == 0) {
+                channelConfig = 1;
+                targetChLayout = mono;
+            } else {
+                channelConfig = 2;
+                targetChLayout = stereo;
+            }
+            //android support AV_SAMPLE_FMT_S16 well.
+            int sampleFormat = 2;
+            targetSampleFormat = AV_SAMPLE_FMT_S16;
+            audioTrack->playStart(data.sampleRate, channelConfig, sampleFormat);
+        }
     }
 }
 
 void MediaPlayer::onDecodeFrameData(DecodeFrameData data) {
     if(data.isFinish) {
+        if(audioTrack != nullptr) {
+            audioTrack->playEnd();
+        }
         return;
     }
     if(!videoDecoder->isDecoding()) {
@@ -144,4 +209,11 @@ void MediaPlayer::onDecodeFrameData(DecodeFrameData data) {
     } else if (data.mediaType == AVMEDIA_TYPE_AUDIO) {
         playAudioFrame(avFrame);
     }
+}
+
+void MediaPlayer::setAudioTrack(std::shared_ptr<NativeAudioTrackWrapper> audioTrackPtr) {
+    if(this->audioTrack != nullptr) {
+        this->audioTrack->playEnd();
+    }
+    this->audioTrack = audioTrackPtr;
 }

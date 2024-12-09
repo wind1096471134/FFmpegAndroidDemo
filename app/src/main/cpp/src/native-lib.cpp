@@ -86,12 +86,14 @@ int encodeVideoToVideo(const std::string &videoInputPath, const std::string &vid
 
 std::shared_ptr<MediaPlayer> mediaPlayer = nullptr;
 std::mutex mutexPlayer;
-void playVideo(const std::string &videoInputPath, ANativeWindow *nativeWindow) {
+jobject gAudioTrackIns = nullptr;
+void playVideo(const std::string &videoInputPath, ANativeWindow *nativeWindow, jobject audioTrackIns) {
     std::lock_guard<std::mutex> lockGuard(mutexPlayer);
     if(mediaPlayer == nullptr) {
         mediaPlayer = std::make_shared<MediaPlayer>();
     }
     mediaPlayer->setPlayWindow(nativeWindow);
+    mediaPlayer->setAudioTrack(std::make_shared<NativeAudioTrackWrapper>(audioTrackIns, gJavaVM));
     mediaPlayer->play(const_cast<std::string &>(videoInputPath));
 }
 
@@ -164,10 +166,15 @@ Java_com_example_ffmpegdemo_MainActivity_ffmpegEncodeVideoToVideo(JNIEnv *env, j
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_ffmpegdemo_PlayerActivity_ffmpegPlayVideo(JNIEnv *env, jobject thiz,
-                                                           jstring file_url, jobject surface) {
+                                                           jstring file_url, jobject surface, jobject audioTrackIns) {
     const char* inputPath = env->GetStringUTFChars(file_url, nullptr);
     ANativeWindow *nativeWindow = ANativeWindow_fromSurface(env, surface);
-    playVideo(std::string(inputPath), nativeWindow);
+    if(gAudioTrackIns != nullptr) {
+        env->DeleteLocalRef(gAudioTrackIns);
+        gAudioTrackIns = nullptr;
+    }
+    gAudioTrackIns = env->NewGlobalRef(audioTrackIns);
+    playVideo(std::string(inputPath), nativeWindow, gAudioTrackIns);
     ANativeWindow_release(nativeWindow);
     env->ReleaseStringUTFChars(file_url, inputPath);
 }
@@ -178,5 +185,9 @@ Java_com_example_ffmpegdemo_PlayerActivity_ffmpegPlayRelease(JNIEnv *env, jobjec
     if(mediaPlayer != nullptr) {
         mediaPlayer->release();
         mediaPlayer = nullptr;
+    }
+    if(gAudioTrackIns != nullptr) {
+        env->DeleteGlobalRef(gAudioTrackIns);
+        gAudioTrackIns = nullptr;
     }
 }
