@@ -49,6 +49,7 @@ class PlayerActivity : AppCompatActivity() {
             override fun surfaceDestroyed(holder: SurfaceHolder) {
                 Log.i(TAG, "surfaceDestroyed")
                 ffmpegPlayRelease()
+                nativeAudioTrack.playEnd()
             }
         })
     }

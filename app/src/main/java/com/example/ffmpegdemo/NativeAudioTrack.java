@@ -49,10 +49,11 @@ public class NativeAudioTrack {
     }
 
     public void playFrame(byte[] data, int size) {
-        AudioTrack audioTrack = this.audioTrack;
-        if (audioTrack != null) {
-            int ret = audioTrack.write(data, 0, size);
-            //Log.i("AudioTrack", "write " + ret);
+        synchronized (this) {
+            if (audioTrack != null) {
+                int ret = audioTrack.write(data, 0, size);
+                //Log.i("AudioTrack", "write " + ret);
+            }
         }
     }
 

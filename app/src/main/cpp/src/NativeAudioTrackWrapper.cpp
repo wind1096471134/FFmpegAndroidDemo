@@ -4,6 +4,7 @@
 
 #include "NativeAudioTrackWrapper.h"
 #include "exception"
+#include "Util.h"
 
 NativeAudioTrackWrapper::NativeAudioTrackWrapper(jobject nativeAudioTrackIns, JavaVM *gJavaVM):
     nativeAudioTrackIns(nativeAudioTrackIns), gJavaVM(gJavaVM){
@@ -36,16 +37,22 @@ void NativeAudioTrackWrapper::playEnd() {
 
 void NativeAudioTrackWrapper::callJavaMethod(const char *methodName, const char *methodSig,
                                              std::function<void(JNIEnv*, jobject, jmethodID)> methodReadyToCall) {
-    JNIEnv* env;
-    jint result = gJavaVM->AttachCurrentThread(&env, nullptr);
-    if (result != JNI_OK) {
-        return;
+    JNIEnv* env = getEnvThisThread();
+    bool envNewCreate = false;
+    if(env == nullptr) {
+        jint result = gJavaVM->AttachCurrentThread(&env, nullptr);
+        if (result != JNI_OK) {
+            return;
+        }
+        envNewCreate = true;
     }
     jclass clazz = env->GetObjectClass(nativeAudioTrackIns);
     jmethodID methodID = env->GetMethodID(clazz, methodName, methodSig);
     methodReadyToCall(env, nativeAudioTrackIns, methodID);
     env->DeleteLocalRef(clazz);
-    gJavaVM->DetachCurrentThread();
+    if(envNewCreate) {
+        gJavaVM->DetachCurrentThread();
+    }
 }
 
 

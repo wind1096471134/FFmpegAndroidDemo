@@ -6,11 +6,14 @@
 #define FFMPEGDEMO_UTIL_H
 
 #include "stdlib.h"
+#include "jni.h"
 extern "C" {
 #include "libavutil/rational.h"
 #include "libavutil/mathematics.h"
 };
 
+JNIEnv* getEnvThisThread();
+void putEnvThisThread(JNIEnv *env);
 int64_t rescaleTimestamp(int64_t ts, AVRational tb_src, AVRational tb_dst);
 bool strEndWith(const char *originStr, const char * suffix);
 long long getCurTimestamp();

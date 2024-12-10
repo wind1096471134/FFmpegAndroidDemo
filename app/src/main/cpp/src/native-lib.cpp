@@ -167,6 +167,7 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_ffmpegdemo_PlayerActivity_ffmpegPlayVideo(JNIEnv *env, jobject thiz,
                                                            jstring file_url, jobject surface, jobject audioTrackIns) {
+    putEnvThisThread(env);
     const char* inputPath = env->GetStringUTFChars(file_url, nullptr);
     ANativeWindow *nativeWindow = ANativeWindow_fromSurface(env, surface);
     if(gAudioTrackIns != nullptr) {
@@ -177,10 +178,12 @@ Java_com_example_ffmpegdemo_PlayerActivity_ffmpegPlayVideo(JNIEnv *env, jobject 
     playVideo(std::string(inputPath), nativeWindow, gAudioTrackIns);
     ANativeWindow_release(nativeWindow);
     env->ReleaseStringUTFChars(file_url, inputPath);
+    putEnvThisThread(nullptr);
 }
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_ffmpegdemo_PlayerActivity_ffmpegPlayRelease(JNIEnv *env, jobject thiz) {
+    putEnvThisThread(env);
     std::lock_guard<std::mutex> lockGuard(mutexPlayer);
     if(mediaPlayer != nullptr) {
         mediaPlayer->release();
@@ -190,4 +193,5 @@ Java_com_example_ffmpegdemo_PlayerActivity_ffmpegPlayRelease(JNIEnv *env, jobjec
         env->DeleteGlobalRef(gAudioTrackIns);
         gAudioTrackIns = nullptr;
     }
+    putEnvThisThread(nullptr);
 }

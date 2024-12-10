@@ -12,4 +12,4 @@
 2. VideoEncoder : 编码器，输入视频帧和音频帧，编码成mp4等。
 3. MediaController : 媒体控制器，负责组合VideoDecoder和VideoEncoder进行视频编码。
 4. Decoder和Encoder由各自工作线程进行编解码，采用简易的生产者-消费者模型。
-5. MediaPlayer ： 简易媒体播放器，decoder解码 + SurfaceView + AudioTrack进行音视频播放，未做音画同步。
+5. MediaPlayer ： 简易媒体播放器，decoder解码 + SurfaceView + AudioTrack进行音视频播放，音画同步策略：视频跟随音频。

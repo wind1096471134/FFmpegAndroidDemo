@@ -6,6 +6,11 @@
 #include "cstring"
 #include "android/log.h"
 #include "chrono"
+#include "map"
+#include "thread"
+
+std::map<std::thread::id, JNIEnv*> envMap;
+std::mutex mapMutex;
 
 bool strEndWith(const char *originStr, const char * suffix) {
     size_t originL = strlen(originStr);
@@ -22,7 +27,7 @@ void log(const char *tag, const char *msg, const char *ret1, int ret2) {
 }
 
 int64_t rescaleTimestamp(int64_t ts, AVRational tb_src, AVRational tb_dst) {
-    int64_t new_ts = av_rescale_q_rnd(ts, tb_dst, tb_src, AV_ROUND_NEAR_INF);
+    int64_t new_ts = av_rescale_q_rnd(ts, av_inv_q(tb_dst), av_inv_q(tb_src), AV_ROUND_NEAR_INF);
 
     return new_ts;
 }
@@ -30,5 +35,26 @@ int64_t rescaleTimestamp(int64_t ts, AVRational tb_src, AVRational tb_dst) {
 long long getCurTimestamp() {
     auto now = std::chrono::system_clock::now().time_since_epoch();
     return std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
+}
+
+JNIEnv *getEnvThisThread() {
+    auto threadId = std::this_thread::get_id();
+    std::lock_guard<std::mutex> lock(mapMutex);
+    auto ret = envMap.find(threadId);
+    if(ret == envMap.end()) {
+        return nullptr;
+    } else {
+        return ret->second;
+    }
+}
+
+void putEnvThisThread(JNIEnv *env) {
+    auto threadId = std::this_thread::get_id();
+    std::lock_guard<std::mutex> lock(mapMutex);
+    if(env == nullptr) {
+        envMap.erase(threadId);
+    } else {
+        envMap[threadId] = env;
+    }
 }
 

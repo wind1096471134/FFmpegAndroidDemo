@@ -28,6 +28,8 @@ private:
     BlockingQueue<AVFrame*> videoFrames;
     BlockingQueue<AVFrame*> audioFrames;
     std::atomic<PlayStatus> playStatus;
+    std::atomic<int64_t> lastAudioPlayPts;
+    std::atomic<AVRational> audioTimeBase;
     AVSampleFormat targetSampleFormat;
     AVChannelLayout targetChLayout;
 
