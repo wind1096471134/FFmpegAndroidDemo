@@ -12,6 +12,19 @@
 std::map<std::thread::id, JNIEnv*> envMap;
 std::mutex mapMutex;
 
+// JNI_OnLoad 函数
+jint JNI_OnLoad(JavaVM* vm, void* reserved) {
+    // 保存 JavaVM 指针到全局变量
+    gJavaVM = vm;
+
+    // 返回 JNI 版本号，这里使用 JNI_VERSION_1_6
+    return JNI_VERSION_1_6;
+}
+
+void JNI_OnUnload(JavaVM* vm, void* reserved) {
+    gJavaVM = nullptr;
+}
+
 bool strEndWith(const char *originStr, const char * suffix) {
     size_t originL = strlen(originStr);
     size_t suffixL = strlen(suffix);

@@ -7,32 +7,31 @@
 #include "android/native_window_jni.h"
 
 //static val
-JavaVM* gJavaVM = nullptr;
 jobject nativeMediaCallback = nullptr;
 std::shared_ptr<MediaController> mediaController = nullptr;
 bool isProcessing = false;
 std::mutex mutex;
 
-void callbackToJVM(int ret, const std::string &extra) {
-    if(nativeMediaCallback != nullptr && gJavaVM != nullptr) {
-        JNIEnv* env;
-        jint result = gJavaVM->AttachCurrentThread(&env, nullptr);
-        if (result != JNI_OK) {
-            // 处理错误
-            return;
-        }
-        jclass clazz = env->GetObjectClass(nativeMediaCallback);
-        jmethodID methodID = env->GetMethodID(clazz, "onEncodeFinish", "(ILjava/lang/String;)V");
-        jstring jResultMessage = env->NewStringUTF(extra.c_str());
-        env->CallVoidMethod(nativeMediaCallback, methodID, ret, jResultMessage);
-
-        env->DeleteLocalRef(jResultMessage);
-        env->DeleteLocalRef(clazz);
-        gJavaVM->DetachCurrentThread();
-    }
-}
-
 class MyIEncodeCallback: public IEncodeCallback {
+private:
+    void callbackToJVM(int ret, const std::string &extra) {
+        if(nativeMediaCallback != nullptr && gJavaVM != nullptr) {
+            JNIEnv* env;
+            jint result = gJavaVM->AttachCurrentThread(&env, nullptr);
+            if (result != JNI_OK) {
+                // 处理错误
+                return;
+            }
+            jclass clazz = env->GetObjectClass(nativeMediaCallback);
+            jmethodID methodID = env->GetMethodID(clazz, "onEncodeFinish", "(ILjava/lang/String;)V");
+            jstring jResultMessage = env->NewStringUTF(extra.c_str());
+            env->CallVoidMethod(nativeMediaCallback, methodID, ret, jResultMessage);
+
+            env->DeleteLocalRef(jResultMessage);
+            env->DeleteLocalRef(clazz);
+            gJavaVM->DetachCurrentThread();
+        }
+    }
 public:
     void onEncodeStart() override {
 
@@ -82,28 +81,6 @@ int encodeVideoToVideo(const std::string &videoInputPath, const std::string &vid
         isProcessing = true;
     }
     return ret;
-}
-
-std::shared_ptr<MediaPlayer> mediaPlayer = nullptr;
-std::mutex mutexPlayer;
-jobject gAudioTrackIns = nullptr;
-void playVideo(const std::string &videoInputPath, ANativeWindow *nativeWindow, jobject audioTrackIns) {
-    std::lock_guard<std::mutex> lockGuard(mutexPlayer);
-    if(mediaPlayer == nullptr) {
-        mediaPlayer = std::make_shared<MediaPlayer>();
-    }
-    mediaPlayer->setPlayWindow(nativeWindow);
-    mediaPlayer->setAudioTrack(std::make_shared<NativeAudioTrackWrapper>(audioTrackIns, gJavaVM));
-    mediaPlayer->play(const_cast<std::string &>(videoInputPath));
-}
-
-// JNI_OnLoad 函数
-jint JNI_OnLoad(JavaVM* vm, void* reserved) {
-    // 保存 JavaVM 指针到全局变量
-    gJavaVM = vm;
-
-    // 返回 JNI 版本号，这里使用 JNI_VERSION_1_6
-    return JNI_VERSION_1_6;
 }
 
 extern "C"
@@ -161,37 +138,4 @@ Java_com_example_ffmpegdemo_MainActivity_ffmpegEncodeVideoToVideo(JNIEnv *env, j
     env->ReleaseStringUTFChars(video_input_path, inputPath);
     env->ReleaseStringUTFChars(output_path, outputPath);
     return ret == 0;
-}
-
-extern "C"
-JNIEXPORT void JNICALL
-Java_com_example_ffmpegdemo_PlayerActivity_ffmpegPlayVideo(JNIEnv *env, jobject thiz,
-                                                           jstring file_url, jobject surface, jobject audioTrackIns) {
-    putEnvThisThread(env);
-    const char* inputPath = env->GetStringUTFChars(file_url, nullptr);
-    ANativeWindow *nativeWindow = ANativeWindow_fromSurface(env, surface);
-    if(gAudioTrackIns != nullptr) {
-        env->DeleteLocalRef(gAudioTrackIns);
-        gAudioTrackIns = nullptr;
-    }
-    gAudioTrackIns = env->NewGlobalRef(audioTrackIns);
-    playVideo(std::string(inputPath), nativeWindow, gAudioTrackIns);
-    ANativeWindow_release(nativeWindow);
-    env->ReleaseStringUTFChars(file_url, inputPath);
-    putEnvThisThread(nullptr);
-}
-extern "C"
-JNIEXPORT void JNICALL
-Java_com_example_ffmpegdemo_PlayerActivity_ffmpegPlayRelease(JNIEnv *env, jobject thiz) {
-    putEnvThisThread(env);
-    std::lock_guard<std::mutex> lockGuard(mutexPlayer);
-    if(mediaPlayer != nullptr) {
-        mediaPlayer->release();
-        mediaPlayer = nullptr;
-    }
-    if(gAudioTrackIns != nullptr) {
-        env->DeleteGlobalRef(gAudioTrackIns);
-        gAudioTrackIns = nullptr;
-    }
-    putEnvThisThread(nullptr);
 }

@@ -76,4 +76,3 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
         ${ffmpeg_libs}
         android
         log)
-

@@ -20,6 +20,21 @@ class PlayerActivity : AppCompatActivity() {
     }
     private lateinit var binding: ActivityPlayerBinding
     private val nativeAudioTrack = NativeAudioTrack()
+    private var playState = 0
+    private val playerStateCallback = object : NativePlayerStateCallback {
+        override fun onStateChange(state: Int) {
+            Log.i("PlayerActivity", "onStateChange $state")
+            binding.playState.post {
+                val resId = when(state) {
+                    1 -> R.drawable.pause
+                    2 -> R.drawable.play
+                    else -> R.drawable.play
+                }
+                binding.playState.setImageResource(resId)
+                playState = state
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,12 +44,18 @@ class PlayerActivity : AppCompatActivity() {
         if(TextUtils.isEmpty(fileUrl)) {
             finish()
         }
-
+        binding.playState.setOnClickListener {
+            if(playState == 1) {
+                ffmpegPlayPause()
+            } else if(playState == 2) {
+                ffmpegPlayResume()
+            }
+        }
         binding.playerSurface.holder.addCallback(object : SurfaceHolder.Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
                 Log.i(TAG, "surfaceCreated")
                 //play video
-                ffmpegPlayVideo(fileUrl!!, holder.surface, nativeAudioTrack)
+                ffmpegPlayVideo(fileUrl!!, holder.surface, nativeAudioTrack, playerStateCallback)
             }
 
             override fun surfaceChanged(
@@ -59,7 +80,18 @@ class PlayerActivity : AppCompatActivity() {
         ffmpegPlayRelease()
     }
 
-    external fun ffmpegPlayVideo(fileUrl: String, surface: Surface, audioTrack: NativeAudioTrack)
+    external fun ffmpegPlayVideo(fileUrl: String, surface: Surface, audioTrack: NativeAudioTrack, playerStateCallback: NativePlayerStateCallback)
+
+    external fun ffmpegPlayPause()
+
+    external fun ffmpegPlayResume()
 
     external fun ffmpegPlayRelease()
+
+    interface NativePlayerStateCallback {
+        /**
+         * state: 0-init, 1-play, 2-pause, 3-destroy
+         */
+        fun onStateChange(state: Int)
+    }
 }

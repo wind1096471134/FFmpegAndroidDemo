@@ -11,4 +11,12 @@
         android:id="@+id/player_surface"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
+
+    <ImageView
+        android:id="@+id/play_state"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:src="@drawable/play"
+        android:layout_marginBottom="50dp"/>
 </FrameLayout>

@@ -14,19 +14,19 @@ extern "C" {
 #define LOG_TAG "MediaPlayer"
 
 void MediaPlayer::play(std::string& playUrl) {
-    if(playStatus == PLAY) {
+    if(playState == PLAY) {
         return;
     }
     videoDecoder->setVideoDecodeCallback(shared_from_this());
     videoDecoder->decodeFile(playUrl);
-    playStatus = PLAY;
+    setState(PLAY);
     //video render thread
     std::thread videoRenderThread([&]() {
         log(LOG_TAG, "videoRenderThread start");
         try{
             int64_t videoLastPts = 0;
             long long videoLastShowTimestamp = 0;
-            while(playStatus != DESTROY) {
+            while(playState != DESTROY) {
                 AVFrame *frame = videoFrames.dequeue();
                 if(frame == nullptr) {
                     continue;
@@ -66,6 +66,8 @@ void MediaPlayer::play(std::string& playUrl) {
                 videoLastPts = frame->pts;
                 videoLastShowTimestamp = getCurTimestamp();
                 av_frame_free(&frame);
+
+                waitUntilPlay();
             }
         } catch (const std::exception& e) { //not work?
             log(LOG_TAG , e.what());
@@ -84,7 +86,7 @@ void MediaPlayer::play(std::string& playUrl) {
 
         int64_t audioLastPts = 0;
         long long audioLastShowTimestamp = 0;
-        while(playStatus != DESTROY) {
+        while(playState != DESTROY) {
             AVFrame *avFrame = audioFrames.dequeue();
             if(avFrame == nullptr) {
                 continue;
@@ -107,6 +109,8 @@ void MediaPlayer::play(std::string& playUrl) {
             audioLastShowTimestamp = getCurTimestamp();
 
             av_frame_free(&avFrame);
+
+            waitUntilPlay();
         }
 
         log(LOG_TAG, "audioPlayThread end");
@@ -135,7 +139,7 @@ void MediaPlayer::release() {
 
 void MediaPlayer::clearData() {
     videoDecoder->stopDecode();
-    playStatus = DESTROY;
+    setState(DESTROY);
     while(!videoFrames.isEmpty()) {
         AVFrame *frame = videoFrames.dequeue();
         av_frame_free(&frame);
@@ -148,7 +152,7 @@ void MediaPlayer::clearData() {
     audioFrames.shutdown();
 }
 
-MediaPlayer::MediaPlayer(): videoFrames(30), playStatus(INIT), lastAudioPlayPts(0), audioTimeBase({1,1}){
+MediaPlayer::MediaPlayer(): videoFrames(30), playState(INIT), lastAudioPlayPts(0), audioTimeBase({1, 1}), playStateMutex(), playStateCondition(){
     videoDecoder = std::make_shared<VideoDecoder>();
 }
 
@@ -260,6 +264,7 @@ void MediaPlayer::onDecodeFrameData(DecodeFrameData data) {
     } else if (data.mediaType == AVMEDIA_TYPE_AUDIO) {
         playAudioFrame(avFrame);
     }
+    waitUntilPlay();
 }
 
 void MediaPlayer::setAudioTrack(std::shared_ptr<NativeAudioTrackWrapper> audioTrackPtr) {
@@ -267,4 +272,29 @@ void MediaPlayer::setAudioTrack(std::shared_ptr<NativeAudioTrackWrapper> audioTr
         this->audioTrack->playEnd();
     }
     this->audioTrack = audioTrackPtr;
+}
+
+void MediaPlayer::setPlayerStateCallback(std::shared_ptr<IPlayerStateCallback> playerStateCallback) {
+    this->playerStateCallback = playerStateCallback;
+}
+
+void MediaPlayer::setState(PlayState playStatus) {
+    this->playState = playStatus;
+    playStateCondition.notify_all();
+    if(playerStateCallback != nullptr) {
+        playerStateCallback->onStateChange(playStatus);
+    }
+}
+
+void MediaPlayer::pause() {
+    setState(PAUSE);
+}
+
+void MediaPlayer::resume() {
+    setState(PLAY);
+}
+
+void MediaPlayer::waitUntilPlay() {
+    std::unique_lock<std::mutex> lock(playStateMutex);
+    playStateCondition.wait(lock, [this] {return playState != PAUSE;});
 }
