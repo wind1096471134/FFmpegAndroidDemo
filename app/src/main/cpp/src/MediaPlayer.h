@@ -11,6 +11,7 @@
 #include "BlockingQueue.h"
 #include "atomic"
 #include "NativeAudioTrackWrapper.h"
+#include "MediaAVSync.h"
 
 enum PlayState {
     INIT,
@@ -32,15 +33,12 @@ private:
     std::shared_ptr<IVideoDecodeCallback> mediaDecodeCallback = nullptr;
     std::shared_ptr<NativeAudioTrackWrapper> audioTrack = nullptr;
     std::shared_ptr<IPlayerStateCallback> playerStateCallback = nullptr;
-    BlockingQueue<AVFrame*> videoFrames;
-    BlockingQueue<AVFrame*> audioFrames;
     std::atomic<PlayState> playState;
-    std::atomic<int64_t> lastAudioPlayPts;
-    std::atomic<AVRational> audioTimeBase;
     AVSampleFormat targetSampleFormat;
-    AVChannelLayout targetChLayout;
+    AVChannelLayout targetChLayout{};
     std::mutex playStateMutex;
     std::condition_variable playStateCondition;
+    MediaAVSync mediaAvSync;
 
     void setState(PlayState playStatus);
     void onDecodeMetaData(DecodeMetaData data) override;

@@ -24,31 +24,10 @@ void MediaPlayer::play(std::string& playUrl) {
     std::thread videoRenderThread([&]() {
         log(LOG_TAG, "videoRenderThread start");
         try{
-            int64_t videoLastPts = 0;
-            long long videoLastShowTimestamp = 0;
             while(playState != DESTROY) {
-                AVFrame *frame = videoFrames.dequeue();
+                AVFrame *frame = mediaAvSync.getNextVideoFrameOut();
                 if(frame == nullptr) {
                     continue;
-                }
-                //calculate and delay render if need.
-                auto curTimestamp = getCurTimestamp();
-                long long realShowDiff = curTimestamp - videoLastShowTimestamp;
-                int perfectPts = frame->pts;
-                //video and audio sync, video try to follow audio.
-                if(lastAudioPlayPts > 0) {
-                    // transform lastAudioPts to time base on video
-                    int64_t audioPtsBaseVideo = rescaleTimestamp(lastAudioPlayPts, audioTimeBase, frame->time_base);
-                    // if(audioPtsBaseVideo > videoLastPts) video slow than audio else video fast than audio
-                    int avDiff = videoLastPts - audioPtsBaseVideo;
-                    perfectPts += avDiff;
-                }
-                int64_t ptsDiff = perfectPts - videoLastPts;
-                //transform ptsDiff to real time diff (ms)
-                double realTimePtsDiff = 1000 * av_q2d(av_mul_q({static_cast<int>(ptsDiff), 1}, frame->time_base));
-                int delay = realTimePtsDiff - realShowDiff;
-                if(delay > 0) {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(delay));
                 }
 
                 ANativeWindow_Buffer buffer;
@@ -63,8 +42,7 @@ void MediaPlayer::play(std::string& playUrl) {
                     ret = ANativeWindow_unlockAndPost(nativeWindow);
                 }
 
-                videoLastPts = frame->pts;
-                videoLastShowTimestamp = getCurTimestamp();
+                mediaAvSync.markVideoFrameShow(frame->pts);
                 av_frame_free(&frame);
 
                 waitUntilPlay();
@@ -84,30 +62,14 @@ void MediaPlayer::play(std::string& playUrl) {
         }
         log(LOG_TAG, "audioPlayThread start");
 
-        int64_t audioLastPts = 0;
-        long long audioLastShowTimestamp = 0;
         while(playState != DESTROY) {
-            AVFrame *avFrame = audioFrames.dequeue();
+            AVFrame *avFrame = mediaAvSync.getNextAudioFrameOut();
             if(avFrame == nullptr) {
                 continue;
             }
-            //calculate and delay render if need.
-            auto curTimestamp = getCurTimestamp();
-            long long realShowDiff = curTimestamp - audioLastShowTimestamp;
-            int64_t ptsDiff = avFrame->pts - audioLastPts;
-            double ptsDuration = 1000 * av_q2d(av_mul_q({static_cast<int>(ptsDiff), 1}, avFrame->time_base));
-            int delay = ptsDuration - realShowDiff;
-            if(delay > 0) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-            }
-            this->lastAudioPlayPts = avFrame->pts;
-            this->audioTimeBase = avFrame->time_base;
 
             audioTrack->playFrame(avFrame->data[0], avFrame->linesize[0]);
-
-            audioLastPts = avFrame->pts;
-            audioLastShowTimestamp = getCurTimestamp();
-
+            mediaAvSync.markAudioFrameShow(avFrame->pts);
             av_frame_free(&avFrame);
 
             waitUntilPlay();
@@ -140,19 +102,10 @@ void MediaPlayer::release() {
 void MediaPlayer::clearData() {
     videoDecoder->stopDecode();
     setState(DESTROY);
-    while(!videoFrames.isEmpty()) {
-        AVFrame *frame = videoFrames.dequeue();
-        av_frame_free(&frame);
-    }
-    videoFrames.shutdown();
-    while(!audioFrames.isEmpty()) {
-        AVFrame *frame = audioFrames.dequeue();
-        av_frame_free(&frame);
-    }
-    audioFrames.shutdown();
+    mediaAvSync.clear();
 }
 
-MediaPlayer::MediaPlayer(): videoFrames(30), playState(INIT), lastAudioPlayPts(0), audioTimeBase({1, 1}), playStateMutex(), playStateCondition(){
+MediaPlayer::MediaPlayer(): playState(INIT), playStateMutex(), playStateCondition(), mediaAvSync(){
     videoDecoder = std::make_shared<VideoDecoder>();
 }
 
@@ -177,7 +130,7 @@ void MediaPlayer::playVideoFrame(AVFrame *avFrame) {
         if(dstFrame->best_effort_timestamp > 0) {
             dstFrame->pts = dstFrame->best_effort_timestamp;
         }
-        videoFrames.enqueue(dstFrame);
+        mediaAvSync.enqueueVideoFrameIn(dstFrame);
     }
     sws_freeContext(context);
 }
@@ -220,7 +173,7 @@ void MediaPlayer::playAudioFrame(AVFrame *avFrame) {
         if(dstFrame->best_effort_timestamp > 0) {
             dstFrame->pts = dstFrame->best_effort_timestamp;
         }
-        audioFrames.enqueue(dstFrame);
+        mediaAvSync.enqueueAudioFrameIn(dstFrame);
     }
 }
 
