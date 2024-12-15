@@ -12,6 +12,8 @@
 #include "atomic"
 #include "NativeAudioTrackWrapper.h"
 #include "MediaAVSync.h"
+#include "VideoSurfaceSink.h"
+#include "AudioTrackSink.h"
 
 enum PlayState {
     INIT,
@@ -28,33 +30,31 @@ public:
 
 class MediaPlayer: public IVideoDecodeCallback, public std::enable_shared_from_this<MediaPlayer>{
 private:
-    ANativeWindow *nativeWindow = nullptr;
     std::shared_ptr<VideoDecoder> videoDecoder = nullptr;
     std::shared_ptr<IVideoDecodeCallback> mediaDecodeCallback = nullptr;
-    std::shared_ptr<NativeAudioTrackWrapper> audioTrack = nullptr;
     std::shared_ptr<IPlayerStateCallback> playerStateCallback = nullptr;
     std::atomic<PlayState> playState;
     AVSampleFormat targetSampleFormat;
     AVChannelLayout targetChLayout{};
     std::mutex playStateMutex;
     std::condition_variable playStateCondition;
-    MediaAVSync mediaAvSync;
+    std::shared_ptr<MediaAVSync> mediaAvSync;
+    std::shared_ptr<VideoSurfaceSink> videoSink;
+    std::shared_ptr<AudioTrackSink> audioSink;
 
     void setState(PlayState playStatus);
     void onDecodeMetaData(DecodeMetaData data) override;
     void onDecodeFrameData(DecodeFrameData data) override;
-    void playVideoFrame(AVFrame *avFrame);
-    void playAudioFrame(AVFrame *avFrame);
+    void sendVideoFrame(AVFrame *avFrame);
+    void sendAudioFrame(AVFrame *avFrame);
     void clearData();
     void waitUntilPlay();
 public:
-    MediaPlayer();
+    MediaPlayer(ANativeWindow *nativeWindow, std::shared_ptr<NativeAudioTrackWrapper> audioTrackWrapper);
     ~MediaPlayer() override;
     void play(std::string& playUrl);
     void pause();
     void resume();
-    void setPlayWindow(ANativeWindow *nativeWindow);
-    void setAudioTrack(std::shared_ptr<NativeAudioTrackWrapper> audioTrackPtr);
     void setPlayerStateCallback(std::shared_ptr<IPlayerStateCallback> playerStateCallback);
     void release();
 };

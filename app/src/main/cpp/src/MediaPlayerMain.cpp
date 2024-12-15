@@ -48,11 +48,9 @@ public:
 void playVideo(const std::string &videoInputPath, ANativeWindow *nativeWindow, jobject audioTrackIns) {
     std::lock_guard<std::mutex> lockGuard(mutexPlayer);
     if (mediaPlayer == nullptr) {
-        mediaPlayer = std::make_shared<MediaPlayer>();
+        mediaPlayer = std::make_shared<MediaPlayer>(nativeWindow, std::make_shared<NativeAudioTrackWrapper>(audioTrackIns, gJavaVM));
     }
     mediaPlayer->setPlayerStateCallback(std::make_shared<MyNativePlayerStateCallback>());
-    mediaPlayer->setPlayWindow(nativeWindow);
-    mediaPlayer->setAudioTrack(std::make_shared<NativeAudioTrackWrapper>(audioTrackIns, gJavaVM));
     mediaPlayer->play(const_cast<std::string &>(videoInputPath));
 }
 

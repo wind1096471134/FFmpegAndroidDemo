@@ -23,33 +23,12 @@ void MediaPlayer::play(std::string& playUrl) {
     //video render thread
     std::thread videoRenderThread([&]() {
         log(LOG_TAG, "videoRenderThread start");
-        try{
-            while(playState != DESTROY) {
-                AVFrame *frame = mediaAvSync.getNextVideoFrameOut();
-                if(frame == nullptr) {
-                    continue;
-                }
 
-                ANativeWindow_Buffer buffer;
-                int ret = ANativeWindow_lock(nativeWindow, &buffer, nullptr);
-                if(ret == 0) {
-                    uint8_t *dstBuffer = (uint8_t *) buffer.bits;
-                    int dstStride = buffer.stride * 4;
-                    int srcStride = frame->linesize[0];
-                    for (int h = 0; h < frame->height; h++) {
-                        memcpy(dstBuffer + h * dstStride, frame->data[0] + h * srcStride, srcStride);
-                    }
-                    ret = ANativeWindow_unlockAndPost(nativeWindow);
-                }
-
-                mediaAvSync.markVideoFrameShow(frame->pts);
-                av_frame_free(&frame);
-
-                waitUntilPlay();
-            }
-        } catch (const std::exception& e) { //not work?
-            log(LOG_TAG , e.what());
+        while(playState != DESTROY) {
+            mediaAvSync->syncAndPlayNextVideoFrame(videoSink.get());
+            waitUntilPlay();
         }
+        videoSink->release();
 
         log(LOG_TAG, "videoRenderThread end");
     });
@@ -57,63 +36,42 @@ void MediaPlayer::play(std::string& playUrl) {
 
     //audio thread
     std::thread audioPlayThread([&]() {
-        if(audioTrack == nullptr) {
-            return ;
-        }
         log(LOG_TAG, "audioPlayThread start");
 
         while(playState != DESTROY) {
-            AVFrame *avFrame = mediaAvSync.getNextAudioFrameOut();
-            if(avFrame == nullptr) {
-                continue;
-            }
-
-            audioTrack->playFrame(avFrame->data[0], avFrame->linesize[0]);
-            mediaAvSync.markAudioFrameShow(avFrame->pts);
-            av_frame_free(&avFrame);
-
+            mediaAvSync->syncAndPlayNextAudioFrame(audioSink.get());
             waitUntilPlay();
         }
+        audioSink->release();
 
         log(LOG_TAG, "audioPlayThread end");
     });
     audioPlayThread.detach();
 }
 
-void MediaPlayer::setPlayWindow(ANativeWindow *nativeWindow) {
-    if(this->nativeWindow != nullptr) {
-        ANativeWindow_release(this->nativeWindow);
-    }
-    this->nativeWindow = nativeWindow;
-    ANativeWindow_acquire(nativeWindow);
-}
-
 void MediaPlayer::release() {
     clearData();
-    if(this->nativeWindow != nullptr) {
-        ANativeWindow_release(this->nativeWindow);
-        this->nativeWindow = nullptr;
-    }
-    if(audioTrack != nullptr) {
-        audioTrack->playEnd();
-    }
 }
 
 void MediaPlayer::clearData() {
     videoDecoder->stopDecode();
     setState(DESTROY);
-    mediaAvSync.clear();
+    mediaAvSync->clear();
 }
 
-MediaPlayer::MediaPlayer(): playState(INIT), playStateMutex(), playStateCondition(), mediaAvSync(){
+MediaPlayer::MediaPlayer(ANativeWindow *nativeWindow, std::shared_ptr<NativeAudioTrackWrapper> audioTrackWrapper):
+        playState(INIT), playStateMutex(), playStateCondition() {
     videoDecoder = std::make_shared<VideoDecoder>();
+    videoSink = std::make_shared<VideoSurfaceSink>(nativeWindow);
+    audioSink = std::make_shared<AudioTrackSink>(audioTrackWrapper);
+    mediaAvSync = std::make_shared<MediaAVSync>();
 }
 
 MediaPlayer::~MediaPlayer() {
     release();
 }
 
-void MediaPlayer::playVideoFrame(AVFrame *avFrame) {
+void MediaPlayer::sendVideoFrame(AVFrame *avFrame) {
     //transform data to RGBA
     SwsContext *context = sws_getContext(avFrame->width, avFrame->height, static_cast<AVPixelFormat>(avFrame->format),
                                          avFrame->width, avFrame->height, AV_PIX_FMT_RGBA, 0,
@@ -125,82 +83,74 @@ void MediaPlayer::playVideoFrame(AVFrame *avFrame) {
 
     av_frame_get_buffer(dstFrame, 0);
     int ret = sws_scale_frame(context, dstFrame, avFrame);
+    sws_freeContext(context);
     if(ret >= 0) {
         av_frame_copy_props(dstFrame, avFrame);
         if(dstFrame->best_effort_timestamp > 0) {
             dstFrame->pts = dstFrame->best_effort_timestamp;
         }
-        mediaAvSync.enqueueVideoFrameIn(dstFrame);
+        mediaAvSync->enqueueVideoFrameIn(dstFrame);
     }
-    sws_freeContext(context);
 }
 
-void MediaPlayer::playAudioFrame(AVFrame *avFrame) {
-    if(audioTrack != nullptr) {
-        AVFrame *dstFrame = avFrame;
-        if(avFrame->format != targetSampleFormat ||
-                av_channel_layout_compare(&targetChLayout, &(avFrame->ch_layout)) != 0) {
-            //transform audio format
-            SwrContext *swrContext = nullptr;
-            int ret = swr_alloc_set_opts2(&swrContext, &targetChLayout, targetSampleFormat, avFrame->sample_rate,
-                                          &avFrame->ch_layout, static_cast<AVSampleFormat>(avFrame->format), avFrame->sample_rate, 0,
-                                          nullptr);
-            if(ret < 0 || swr_init(swrContext) < 0) {
-                log(LOG_TAG, "swr_alloc_set_opts2 fail", ret);
-                return;
-            }
-            AVFrame *audioFrame = av_frame_alloc();
-            audioFrame->ch_layout = targetChLayout;
-            audioFrame->format = targetSampleFormat;
-            audioFrame->sample_rate = avFrame->sample_rate;
-            audioFrame->time_base = avFrame->time_base;
+void MediaPlayer::sendAudioFrame(AVFrame *avFrame) {
+    AVFrame *dstFrame = avFrame;
+    //transform audio format
+    if(avFrame->format != targetSampleFormat ||
+       av_channel_layout_compare(&targetChLayout, &(avFrame->ch_layout)) != 0) {
+        SwrContext *swrContext = nullptr;
+        int ret = swr_alloc_set_opts2(&swrContext, &targetChLayout, targetSampleFormat, avFrame->sample_rate,
+                                      &avFrame->ch_layout, static_cast<AVSampleFormat>(avFrame->format), avFrame->sample_rate, 0,
+                                      nullptr);
+        if(ret < 0 || swr_init(swrContext) < 0) {
+            log(LOG_TAG, "swr_alloc_set_opts2 fail", ret);
+            return;
+        }
+        AVFrame *audioFrame = av_frame_alloc();
+        audioFrame->ch_layout = targetChLayout;
+        audioFrame->format = targetSampleFormat;
+        audioFrame->sample_rate = avFrame->sample_rate;
+        audioFrame->time_base = avFrame->time_base;
 
-            av_frame_get_buffer(audioFrame, 0);
-            ret = swr_convert_frame(swrContext, audioFrame, avFrame);
-            swr_free(&swrContext);
-            if(ret < 0) {
-                log(LOG_TAG, "swr_alloc_set_opts2 fail", ret);
-                return;
-            }
-            dstFrame = audioFrame;
-        } else {
-            AVFrame *audioFrame = av_frame_clone(avFrame);
-            av_frame_copy_props(audioFrame, avFrame);
-            dstFrame = audioFrame;
+        av_frame_get_buffer(audioFrame, 0);
+        ret = swr_convert_frame(swrContext, audioFrame, avFrame);
+        swr_free(&swrContext);
+        if(ret < 0) {
+            log(LOG_TAG, "swr_alloc_set_opts2 fail", ret);
+            return;
         }
-        dstFrame->pts = avFrame->pts;
-        dstFrame->best_effort_timestamp = avFrame->best_effort_timestamp;
-        if(dstFrame->best_effort_timestamp > 0) {
-            dstFrame->pts = dstFrame->best_effort_timestamp;
-        }
-        mediaAvSync.enqueueAudioFrameIn(dstFrame);
+        dstFrame = audioFrame;
+    } else {
+        AVFrame *audioFrame = av_frame_clone(avFrame);
+        av_frame_copy_props(audioFrame, avFrame);
+        dstFrame = audioFrame;
     }
+    dstFrame->pts = avFrame->pts;
+    dstFrame->best_effort_timestamp = avFrame->best_effort_timestamp;
+    if(dstFrame->best_effort_timestamp > 0) {
+        dstFrame->pts = dstFrame->best_effort_timestamp;
+    }
+
+    mediaAvSync->enqueueAudioFrameIn(dstFrame);
 }
 
 void MediaPlayer::onDecodeMetaData(DecodeMetaData data) {
     if(data.mediaType == AVMEDIA_TYPE_VIDEO) {
-        int ret = ANativeWindow_setBuffersGeometry(nativeWindow, data.w, data.h, WINDOW_FORMAT_RGBA_8888);
-        log(LOG_TAG, "ANativeWindow_setBuffersGeometry", ret);
+        videoSink->setSurfaceSize(data.w, data.h);
     } else if (data.mediaType == AVMEDIA_TYPE_AUDIO) {
-        if(audioTrack != nullptr) {
-            int channelConfig;
-            const AVChannelLayout stereo = AV_CHANNEL_LAYOUT_STEREO;
-            const AVChannelLayout mono = AV_CHANNEL_LAYOUT_MONO;
-            if(av_channel_layout_compare(&stereo, &(data.channelLayout)) == 0) {
-                channelConfig = 2;
-                targetChLayout = stereo;
-            } else if (av_channel_layout_compare(&mono, &(data.channelLayout)) == 0) {
-                channelConfig = 1;
-                targetChLayout = mono;
-            } else {
-                channelConfig = 2;
-                targetChLayout = stereo;
-            }
-            //android support AV_SAMPLE_FMT_S16 well.
-            int sampleFormat = 2;
-            targetSampleFormat = AV_SAMPLE_FMT_S16;
-            audioTrack->playStart(data.sampleRate, channelConfig, sampleFormat);
+        const AVChannelLayout stereo = AV_CHANNEL_LAYOUT_STEREO;
+        const AVChannelLayout mono = AV_CHANNEL_LAYOUT_MONO;
+        if (av_channel_layout_compare(&stereo, &(data.channelLayout)) == 0) {
+            targetChLayout = stereo;
+        } else if (av_channel_layout_compare(&mono, &(data.channelLayout)) == 0) {
+            targetChLayout = mono;
+        } else {
+            targetChLayout = stereo;
         }
+        //android support AV_SAMPLE_FMT_S16 well.
+        targetSampleFormat = AV_SAMPLE_FMT_S16;
+
+        audioSink->setAudioConfig(data.sampleRate, targetChLayout, targetSampleFormat);
     }
 }
 
@@ -213,18 +163,11 @@ void MediaPlayer::onDecodeFrameData(DecodeFrameData data) {
     }
     AVFrame *avFrame = data.avFrame;
     if(data.mediaType == AVMEDIA_TYPE_VIDEO) {
-        playVideoFrame(avFrame);
+        sendVideoFrame(avFrame);
     } else if (data.mediaType == AVMEDIA_TYPE_AUDIO) {
-        playAudioFrame(avFrame);
+        sendAudioFrame(avFrame);
     }
     waitUntilPlay();
-}
-
-void MediaPlayer::setAudioTrack(std::shared_ptr<NativeAudioTrackWrapper> audioTrackPtr) {
-    if(this->audioTrack != nullptr) {
-        this->audioTrack->playEnd();
-    }
-    this->audioTrack = audioTrackPtr;
 }
 
 void MediaPlayer::setPlayerStateCallback(std::shared_ptr<IPlayerStateCallback> playerStateCallback) {
