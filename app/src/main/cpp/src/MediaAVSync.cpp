@@ -6,13 +6,15 @@
 #include "Util.h"
 #include "thread"
 
+#define LOG_TAG "MediaAVSync"
+
 MediaAVSync::MediaAVSync():
 videoFrames(30), audioFrames(30) {
 
 }
 
 MediaAVSync::~MediaAVSync() {
-    clear();
+    log(LOG_TAG, "～MediaAVSync");
 }
 
 void MediaAVSync::enqueueVideoFrameIn(AVFrame *frame) {
@@ -28,13 +30,17 @@ void MediaAVSync::enqueueAudioFrameIn(AVFrame *frame) {
 
 void MediaAVSync::clear() {
     while(!videoFrames.isEmpty()) {
-        AVFrame *frame = videoFrames.dequeue();
-        av_frame_free(&frame);
+        AVFrame *frame = videoFrames.dequeue(nullptr);
+        if(frame != nullptr) {
+            av_frame_free(&frame);
+        }
     }
     videoFrames.shutdown();
     while(!audioFrames.isEmpty()) {
-        AVFrame *frame = audioFrames.dequeue();
-        av_frame_free(&frame);
+        AVFrame *frame = audioFrames.dequeue(nullptr);
+        if(frame != nullptr) {
+            av_frame_free(&frame);
+        }
     }
     audioFrames.shutdown();
     videoLastPts = 0;
@@ -45,7 +51,7 @@ void MediaAVSync::clear() {
 }
 
 int64_t MediaAVSync::syncAndPlayNextVideoFrame(AVSink *sink) {
-    AVFrame *frame = videoFrames.dequeue();
+    AVFrame *frame = videoFrames.dequeue(nullptr);
     if(frame == nullptr) {
         return -1;
     }
@@ -78,7 +84,7 @@ int64_t MediaAVSync::syncAndPlayNextVideoFrame(AVSink *sink) {
 }
 
 int64_t MediaAVSync::syncAndPlayNextAudioFrame(AVSink *sink) {
-    AVFrame *frame = audioFrames.dequeue();
+    AVFrame *frame = audioFrames.dequeue(nullptr);
     if(frame == nullptr) {
         return -1;
     }

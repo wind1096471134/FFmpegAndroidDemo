@@ -12,7 +12,6 @@
 JavaVM* gJavaVM = nullptr;
 std::shared_ptr<MediaPlayer> mediaPlayer = nullptr;
 std::mutex mutexPlayer;
-jobject gAudioTrackIns = nullptr;
 jobject nativePlayerStateCallback = nullptr;
 
 class MyNativePlayerStateCallback: public IPlayerStateCallback {
@@ -63,11 +62,6 @@ Java_com_example_ffmpegdemo_PlayerActivity_ffmpegPlayVideo(JNIEnv *env, jobject 
     putEnvThisThread(env);
     const char *inputPath = env->GetStringUTFChars(file_url, nullptr);
     ANativeWindow *nativeWindow = ANativeWindow_fromSurface(env, surface);
-    if (gAudioTrackIns != nullptr) {
-        env->DeleteLocalRef(gAudioTrackIns);
-        gAudioTrackIns = nullptr;
-    }
-    gAudioTrackIns = env->NewGlobalRef(audioTrackIns);
     if(nativePlayerStateCallback != nullptr) {
         env->DeleteGlobalRef(nativePlayerStateCallback);
         nativePlayerStateCallback = nullptr;
@@ -75,7 +69,7 @@ Java_com_example_ffmpegdemo_PlayerActivity_ffmpegPlayVideo(JNIEnv *env, jobject 
     if(playerStateCallback != nullptr) {
         nativePlayerStateCallback = env->NewGlobalRef(playerStateCallback);
     }
-    playVideo(std::string(inputPath), nativeWindow, gAudioTrackIns);
+    playVideo(std::string(inputPath), nativeWindow, audioTrackIns);
     ANativeWindow_release(nativeWindow);
     env->ReleaseStringUTFChars(file_url, inputPath);
     putEnvThisThread(nullptr);
@@ -88,10 +82,6 @@ Java_com_example_ffmpegdemo_PlayerActivity_ffmpegPlayRelease(JNIEnv *env, jobjec
     if (mediaPlayer != nullptr) {
         mediaPlayer->release();
         mediaPlayer = nullptr;
-    }
-    if (gAudioTrackIns != nullptr) {
-        env->DeleteGlobalRef(gAudioTrackIns);
-        gAudioTrackIns = nullptr;
     }
     if(nativePlayerStateCallback != nullptr) {
         env->DeleteGlobalRef(nativePlayerStateCallback);

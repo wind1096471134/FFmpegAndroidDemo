@@ -39,6 +39,7 @@ public:
     int encodeImgAndAudioToVideo(const std::string &imgInputPath, const std::string &audioInputPath,
                                  const std::string &videoOutputPath);
     int encodeVideoToVideo(const std::string &videoInputPath, const std::string &videoOutputPath);
+    void release();
 };
 
 #endif //FFMPEGDEMO_MEDIACONTROLLER_H

@@ -23,28 +23,28 @@ void MediaPlayer::play(std::string& playUrl) {
     //video render thread
     std::thread videoRenderThread([&]() {
         log(LOG_TAG, "videoRenderThread start");
-
+        //avoid outside class destroy early.
+        std::shared_ptr<MediaPlayer> mediaPlayer = shared_from_this();
         while(playState != DESTROY) {
             mediaAvSync->syncAndPlayNextVideoFrame(videoSink.get());
             waitUntilPlay();
         }
         videoSink->release();
-
-        log(LOG_TAG, "videoRenderThread end");
+        log(LOG_TAG, "videoRenderThread end", mediaPlayer.use_count());
     });
     videoRenderThread.detach();
 
     //audio thread
     std::thread audioPlayThread([&]() {
         log(LOG_TAG, "audioPlayThread start");
-
+        //avoid outside class destroy early.
+        std::shared_ptr<MediaPlayer> mediaPlayer = shared_from_this();
         while(playState != DESTROY) {
             mediaAvSync->syncAndPlayNextAudioFrame(audioSink.get());
             waitUntilPlay();
         }
         audioSink->release();
-
-        log(LOG_TAG, "audioPlayThread end");
+        log(LOG_TAG, "audioPlayThread end", mediaPlayer.use_count());
     });
     audioPlayThread.detach();
 }
@@ -54,7 +54,10 @@ void MediaPlayer::release() {
 }
 
 void MediaPlayer::clearData() {
-    videoDecoder->stopDecode();
+    if(videoDecoder != nullptr) {
+        videoDecoder->stopDecode();
+        videoDecoder = nullptr;
+    }
     setState(DESTROY);
     mediaAvSync->clear();
 }
@@ -68,7 +71,7 @@ MediaPlayer::MediaPlayer(ANativeWindow *nativeWindow, std::shared_ptr<NativeAudi
 }
 
 MediaPlayer::~MediaPlayer() {
-    release();
+    log(LOG_TAG, "~MediaPlayer");
 }
 
 void MediaPlayer::sendVideoFrame(AVFrame *avFrame) {

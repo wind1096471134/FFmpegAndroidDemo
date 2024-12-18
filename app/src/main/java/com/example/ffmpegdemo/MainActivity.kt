@@ -106,6 +106,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         threadPoolExecutor.shutdown()
+        ffmpegEncodeDestroy()
     }
 
     private fun encodeImgToVideo() {
@@ -199,6 +200,8 @@ class MainActivity : AppCompatActivity() {
     external fun ffmpegEncodeImgAndAudioToVideo(imgInputPath: String, audioInputPath: String?, outputPath: String): Boolean
 
     external fun ffmpegEncodeVideoToVideo(videoInputPath: String, outputPath: String): Boolean
+
+    external fun ffmpegEncodeDestroy();
 
     companion object {
         // Used to load the 'ffmpegdemo' library on application startup.

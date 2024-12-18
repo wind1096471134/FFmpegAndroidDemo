@@ -139,3 +139,17 @@ Java_com_example_ffmpegdemo_MainActivity_ffmpegEncodeVideoToVideo(JNIEnv *env, j
     env->ReleaseStringUTFChars(output_path, outputPath);
     return ret == 0;
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_ffmpegdemo_MainActivity_ffmpegEncodeDestroy(JNIEnv *env, jobject thiz) {
+    std::lock_guard<std::mutex> lock(mutex);
+    if(mediaController != nullptr) {
+        mediaController = nullptr;
+    }
+    isProcessing = false;
+    if(nativeMediaCallback != nullptr) {
+        env->DeleteGlobalRef(nativeMediaCallback);
+        nativeMediaCallback = nullptr;
+    }
+}

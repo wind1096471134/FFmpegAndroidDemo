@@ -74,6 +74,7 @@ int MediaController::encodeImgToVideo(const std::string &imgInputPath, const std
     audioDecodeEnd = true;//here has no audio, so set it.
     singleDecoder = true;
     videoEncoder->setEncodeCallback(shared_from_this());
+    videoDecoder->setVideoDecodeCallback(shared_from_this());
     videoDecoder->decodeFile(imgInputPath);
     return SUC;
 }
@@ -119,6 +120,7 @@ MediaController::~MediaController() {
     if(FFMPEG_LOG) {
         av_log_set_callback(nullptr);
     }
+    log(LOG_TAG, "~MediaController");
 }
 
 void MediaController::onEncodeStart() {
@@ -136,4 +138,10 @@ void MediaController::onEncodeFinish(int ret, const std::string &encodeFile) {
 
 void MediaController::setEncodeCallback(std::shared_ptr<IEncodeCallback> callback) {
     outsideEncodeCallback = callback;
+}
+
+void MediaController::release() {
+    videoEncoder->setEncodeCallback(nullptr);
+    videoDecoder->setVideoDecodeCallback(nullptr);
+    audioDecoder->setVideoDecodeCallback(nullptr);
 }

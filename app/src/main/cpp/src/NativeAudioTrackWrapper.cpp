@@ -7,10 +7,18 @@
 #include "Util.h"
 
 NativeAudioTrackWrapper::NativeAudioTrackWrapper(jobject nativeAudioTrackIns, JavaVM *gJavaVM):
-    nativeAudioTrackIns(nativeAudioTrackIns), gJavaVM(gJavaVM){
+    gJavaVM(gJavaVM){
+    JNIEnv* env = getEnvThisThread();
+    if(env != nullptr) {
+        this->nativeAudioTrackIns = env->NewGlobalRef(nativeAudioTrackIns);
+    }
 }
 
 NativeAudioTrackWrapper::~NativeAudioTrackWrapper() {
+    JNIEnv* env = getEnvThisThread();
+    if(env != nullptr) {
+        env->DeleteGlobalRef(nativeAudioTrackIns);
+    }
 }
 
 void NativeAudioTrackWrapper::playStart(int sampleRate, int channelConfig, int audioFormat) {
