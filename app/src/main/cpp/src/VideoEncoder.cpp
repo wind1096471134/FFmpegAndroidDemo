@@ -155,14 +155,14 @@ int VideoEncoder::encodeThreadHandlerLoop(const std::string &outputFile,
     }
 
     //loop and encode frames.
-    EncodeFrame emptyFrame = {nullptr};
     while (encodeRunning || !queue.isEmpty()) {
-        EncodeFrame encodeFrame = queue.dequeue(emptyFrame);
-        if(encodeFrame.avFrame == nullptr) {
+        EncodeFrame *encodeFrame = nullptr;
+        if(!queue.dequeue(&encodeFrame) || encodeFrame == nullptr) {
             continue;
         }
-        ret = encodeFrameInternal(encodeFrame);
-        av_frame_free(&encodeFrame.avFrame);
+
+        ret = encodeFrameInternal(*encodeFrame);
+        av_frame_free(&(*encodeFrame).avFrame);
         if(ret != SUC) {
             freeResource();
             return ret;
@@ -323,14 +323,13 @@ void VideoEncoder::freeResource() {
         avformat_free_context(outputFormatContext);
         outputFormatContext = nullptr;
     }
-    EncodeFrame emptyFrame = {nullptr};
+    queue.shutdown();
     while(!queue.isEmpty()) {
-        EncodeFrame frame = queue.dequeue(emptyFrame);
-        if(frame.avFrame != nullptr) {
-            av_frame_free(&frame.avFrame);
+        EncodeFrame *frame = nullptr;
+        if(queue.dequeueNonBlock(&frame) && frame != nullptr) {
+            av_frame_free(&(*frame).avFrame);
         }
     }
-    queue.shutdown();
     videoStream = nullptr;
     audioStream = nullptr;
     videoFramePts = 0;

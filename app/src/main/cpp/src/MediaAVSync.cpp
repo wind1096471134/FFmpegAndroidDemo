@@ -30,15 +30,15 @@ void MediaAVSync::enqueueAudioFrameIn(AVFrame *frame) {
 
 void MediaAVSync::clear() {
     while(!videoFrames.isEmpty()) {
-        AVFrame *frame = videoFrames.dequeueNonBlock(nullptr);
-        if(frame != nullptr) {
-            av_frame_free(&frame);
+        AVFrame **frame = nullptr;
+        if(videoFrames.dequeueNonBlock(&frame) && *frame != nullptr) {
+            av_frame_free(frame);
         }
     }
     while(!audioFrames.isEmpty()) {
-        AVFrame *frame = audioFrames.dequeueNonBlock(nullptr);
-        if(frame != nullptr) {
-            av_frame_free(&frame);
+        AVFrame **frame = nullptr;
+        if(audioFrames.dequeueNonBlock(&frame) && *frame != nullptr) {
+            av_frame_free(frame);
         }
     }
     videoLastPts = 0;
@@ -49,10 +49,11 @@ void MediaAVSync::clear() {
 }
 
 int64_t MediaAVSync::syncAndPlayNextVideoFrame(AVSink *sink) {
-    AVFrame *frame = videoFrames.dequeue(nullptr);
-    if(frame == nullptr) {
+    AVFrame **framePtr = nullptr;
+    if(!videoFrames.dequeue(&framePtr) || *framePtr == nullptr) {
         return -1;
     }
+    AVFrame *frame = *framePtr;
     //calculate and delay render if need.
     auto curTimestamp = getCurTimestamp();
     long long realShowDiff = curTimestamp - videoLastShowTimestamp;
@@ -82,10 +83,11 @@ int64_t MediaAVSync::syncAndPlayNextVideoFrame(AVSink *sink) {
 }
 
 int64_t MediaAVSync::syncAndPlayNextAudioFrame(AVSink *sink) {
-    AVFrame *frame = audioFrames.dequeue(nullptr);
-    if(frame == nullptr) {
+    AVFrame **framePtr = nullptr;
+    if(!audioFrames.dequeue(&framePtr) || *framePtr == nullptr) {
         return -1;
     }
+    AVFrame *frame = *framePtr;
 
     //calculate and delay render if need.
     auto curTimestamp = getCurTimestamp();

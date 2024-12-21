@@ -23,16 +23,14 @@ public:
     explicit BlockingQueue(int capacity = INT_MAX): capacity(capacity), isShutdown(false) {};
     ~BlockingQueue();
     void enqueue(const T &item);
-    T dequeue(T returnValWhenShutdown);
-    T dequeueNonBlock(T returnValWhenEmpty);
+    int dequeue(T **out);
+    int dequeueNonBlock(T **out);
     bool isEmpty();
     void shutdown();
 };
 
 template<typename T>
-BlockingQueue<T>::~BlockingQueue() {
-
-}
+BlockingQueue<T>::~BlockingQueue() = default;
 
 template<typename T>
 void BlockingQueue<T>::shutdown() {
@@ -51,28 +49,32 @@ void BlockingQueue<T>::enqueue(const T &item) {
 }
 
 template<typename T>
-T BlockingQueue<T>::dequeue(T returnValWhenShutdown) {
+int BlockingQueue<T>::dequeue(T **out) {
     std::unique_lock<std::mutex> lock(mutex);
     notEmpty.wait(lock, [this]{ return isShutdown || !queue.empty();});
     if(queue.empty() || isShutdown) {
-        return returnValWhenShutdown;
+        *out = nullptr;
+        return 0;
     }
     T item = queue.front();
+    *out = new T(item);
     queue.pop();
     notFull.notify_all();
-    return item;
+    return 1;
 }
 
 template<typename T>
-T BlockingQueue<T>::dequeueNonBlock(T returnValWhenEmpty) {
+int BlockingQueue<T>::dequeueNonBlock(T **out) {
     std::unique_lock<std::mutex> lock(mutex);
     if(queue.size() == 0) {
-        return returnValWhenEmpty;
+        *out = nullptr;
+        return 0;
     }
     T item = queue.front();
+    *out = new T(item);
     queue.pop();
     notFull.notify_all();
-    return item;
+    return 1;
 }
 
 template<typename T>
