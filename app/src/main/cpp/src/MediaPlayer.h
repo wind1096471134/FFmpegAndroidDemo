@@ -30,6 +30,7 @@ public:
 
 class MediaPlayer: public IVideoDecodeCallback, public std::enable_shared_from_this<MediaPlayer>{
 private:
+    std::mutex videoDecoderMutex;
     std::shared_ptr<VideoDecoder> videoDecoder = nullptr;
     std::shared_ptr<IVideoDecodeCallback> mediaDecodeCallback = nullptr;
     std::shared_ptr<IPlayerStateCallback> playerStateCallback = nullptr;
@@ -41,20 +42,25 @@ private:
     std::shared_ptr<MediaAVSync> mediaAvSync;
     std::shared_ptr<VideoSurfaceSink> videoSink;
     std::shared_ptr<AudioTrackSink> audioSink;
+    std::atomic<bool> isLoop;
+    std::string playUrl;
 
     void setState(PlayState playStatus);
     void onDecodeMetaData(DecodeMetaData data) override;
     void onDecodeFrameData(DecodeFrameData data) override;
+    void onDecodeEnd() override;
     void sendVideoFrame(AVFrame *avFrame);
     void sendAudioFrame(AVFrame *avFrame);
     void clearData();
     void waitUntilPlay();
+    void startDecoder(std::string &playUrl);
 public:
     MediaPlayer(ANativeWindow *nativeWindow, std::shared_ptr<NativeAudioTrackWrapper> audioTrackWrapper);
     ~MediaPlayer() override;
     void play(std::string& playUrl);
     void pause();
     void resume();
+    void setLoop(bool loop);
     void setPlayerStateCallback(std::shared_ptr<IPlayerStateCallback> playerStateCallback);
     void release();
 };

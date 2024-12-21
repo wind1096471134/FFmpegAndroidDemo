@@ -29,6 +29,7 @@ private:
     std::shared_ptr<IEncodeCallback> outsideEncodeCallback = nullptr;
     void onDecodeFrameData(DecodeFrameData data) override;
     void onDecodeMetaData(DecodeMetaData data) override;
+    void onDecodeEnd() override;
     void onEncodeStart() override;
     void onEncodeFinish(int ret, const std::string &encodeFile) override;
 public:

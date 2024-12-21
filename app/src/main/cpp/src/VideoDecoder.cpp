@@ -13,7 +13,8 @@
 #define LOG_TAG "VideoDecoder"
 
 VideoDecoder::~VideoDecoder() {
-    freeResource();
+    log(LOG_TAG, "~VideoDecoder");
+    stopDecode();
 }
 
 void VideoDecoder::freeResource() {
@@ -103,6 +104,9 @@ int VideoDecoder::decodeFile(const std::string &inputFilePath) {
     decoding = true;
     this->filePath = inputFilePath;
     std::thread thread([&](){
+        //avoid outside class destroy early.
+        std::shared_ptr<VideoDecoder> keepPtr = shared_from_this();
+
         log(LOG_TAG, "decodeFile start ", filePath.data());
         //open input
         int ret = avformat_open_input(&avFormatContext, filePath.data(), nullptr, nullptr);
@@ -214,6 +218,7 @@ int VideoDecoder::decodeFile(const std::string &inputFilePath) {
                 DecodeFrameData frameData = {AVMEDIA_TYPE_AUDIO, nullptr, true};
                 videoDecodeCallback->onDecodeFrameData(frameData);
             }
+            videoDecodeCallback->onDecodeEnd();
         }
         freeResource();
 
@@ -231,7 +236,7 @@ void VideoDecoder::stopDecode() {
 }
 
 VideoDecoder::VideoDecoder(): decoding(false) {
-
+    log(LOG_TAG, "VideoDecoder");
 }
 
 bool VideoDecoder::isDecoding() {

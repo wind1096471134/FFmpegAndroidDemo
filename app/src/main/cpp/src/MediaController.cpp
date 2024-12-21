@@ -18,6 +18,10 @@ extern "C" {
 #define FFMPEG_LOG false
 
 
+void MediaController::onDecodeEnd() {
+
+}
+
 void MediaController::onDecodeFrameData(DecodeFrameData data) {
     if(data.isFinish) {
         log(LOG_TAG, "decode frame finish", data.mediaType);

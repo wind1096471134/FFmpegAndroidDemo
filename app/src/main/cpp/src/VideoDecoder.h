@@ -38,9 +38,10 @@ public:
     virtual ~IVideoDecodeCallback() = default;
     virtual void onDecodeMetaData(DecodeMetaData data) = 0;
     virtual void onDecodeFrameData(DecodeFrameData data) = 0;
+    virtual void onDecodeEnd() = 0;
 };
 
-class VideoDecoder{
+class VideoDecoder: public std::enable_shared_from_this<VideoDecoder>{
 protected:
     AVFormatContext *avFormatContext = nullptr;
     AVCodecContext  *videoCodecContext = nullptr;

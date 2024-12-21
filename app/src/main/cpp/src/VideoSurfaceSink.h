@@ -7,9 +7,11 @@
 
 #include <android/native_window_jni.h>
 #include "AVSink.h"
+#include "mutex"
 
 class VideoSurfaceSink: public AVSink {
 private:
+    std::mutex mutex;
     ANativeWindow *nativeWindow;
     void freeRes();
 public:

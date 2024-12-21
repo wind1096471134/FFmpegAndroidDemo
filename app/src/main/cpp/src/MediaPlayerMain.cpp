@@ -110,3 +110,12 @@ Java_com_example_ffmpegdemo_PlayerActivity_ffmpegPlayResume(JNIEnv *env, jobject
     }
     putEnvThisThread(nullptr);
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_ffmpegdemo_PlayerActivity_ffmpegSetLoop(JNIEnv *env, jobject thiz, jboolean loop) {
+    std::lock_guard<std::mutex> lockGuard(mutexPlayer);
+    if(mediaPlayer != nullptr) {
+        mediaPlayer->setLoop(loop);
+    }
+}

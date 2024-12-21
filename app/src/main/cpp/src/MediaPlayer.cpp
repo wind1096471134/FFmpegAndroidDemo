@@ -17,8 +17,8 @@ void MediaPlayer::play(std::string& playUrl) {
     if(playState == PLAY) {
         return;
     }
-    videoDecoder->setVideoDecodeCallback(shared_from_this());
-    videoDecoder->decodeFile(playUrl);
+    this->playUrl = playUrl;
+    startDecoder(playUrl);
     setState(PLAY);
     //video render thread
     std::thread videoRenderThread([&]() {
@@ -30,6 +30,7 @@ void MediaPlayer::play(std::string& playUrl) {
             waitUntilPlay();
         }
         videoSink->release();
+        mediaAvSync->clear();
         log(LOG_TAG, "videoRenderThread end", mediaPlayer.use_count());
     });
     videoRenderThread.detach();
@@ -44,6 +45,7 @@ void MediaPlayer::play(std::string& playUrl) {
             waitUntilPlay();
         }
         audioSink->release();
+        mediaAvSync->clear();
         log(LOG_TAG, "audioPlayThread end", mediaPlayer.use_count());
     });
     audioPlayThread.detach();
@@ -54,17 +56,19 @@ void MediaPlayer::release() {
 }
 
 void MediaPlayer::clearData() {
+    setState(DESTROY);
+    std::lock_guard<std::mutex> lockGuard(videoDecoderMutex);
     if(videoDecoder != nullptr) {
         videoDecoder->stopDecode();
         videoDecoder = nullptr;
     }
-    setState(DESTROY);
-    mediaAvSync->clear();
+    videoSink->release();
+    audioSink->release();
+    mediaAvSync->shutdown();
 }
 
 MediaPlayer::MediaPlayer(ANativeWindow *nativeWindow, std::shared_ptr<NativeAudioTrackWrapper> audioTrackWrapper):
-        playState(INIT), playStateMutex(), playStateCondition() {
-    videoDecoder = std::make_shared<VideoDecoder>();
+        playState(INIT), playStateMutex(), playStateCondition(), isLoop(false) {
     videoSink = std::make_shared<VideoSurfaceSink>(nativeWindow);
     audioSink = std::make_shared<AudioTrackSink>(audioTrackWrapper);
     mediaAvSync = std::make_shared<MediaAVSync>();
@@ -138,6 +142,9 @@ void MediaPlayer::sendAudioFrame(AVFrame *avFrame) {
 }
 
 void MediaPlayer::onDecodeMetaData(DecodeMetaData data) {
+    if(playState == DESTROY) {
+        return;
+    }
     if(data.mediaType == AVMEDIA_TYPE_VIDEO) {
         videoSink->setSurfaceSize(data.w, data.h);
     } else if (data.mediaType == AVMEDIA_TYPE_AUDIO) {
@@ -157,11 +164,20 @@ void MediaPlayer::onDecodeMetaData(DecodeMetaData data) {
     }
 }
 
-void MediaPlayer::onDecodeFrameData(DecodeFrameData data) {
-    if(data.isFinish) {
+void MediaPlayer::onDecodeEnd() {
+    if(playState == DESTROY) {
         return;
     }
-    if(!videoDecoder->isDecoding()) {
+    if(isLoop) {
+        startDecoder(this->playUrl);
+    }
+}
+
+void MediaPlayer::onDecodeFrameData(DecodeFrameData data) {
+    if(playState == DESTROY) {
+        return;
+    }
+    if(data.isFinish) {
         return;
     }
     AVFrame *avFrame = data.avFrame;
@@ -196,4 +212,18 @@ void MediaPlayer::resume() {
 void MediaPlayer::waitUntilPlay() {
     std::unique_lock<std::mutex> lock(playStateMutex);
     playStateCondition.wait(lock, [this] {return playState != PAUSE;});
+}
+
+void MediaPlayer::setLoop(bool loop) {
+    this->isLoop = loop;
+}
+
+void MediaPlayer::startDecoder(std::string &playUrl) {
+    std::lock_guard<std::mutex> lockGuard(videoDecoderMutex);
+    if(videoDecoder != nullptr) {
+        videoDecoder->stopDecode();
+    }
+    videoDecoder = std::make_shared<VideoDecoder>();
+    videoDecoder->setVideoDecodeCallback(shared_from_this());
+    videoDecoder->decodeFile(playUrl);
 }

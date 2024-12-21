@@ -28,6 +28,7 @@ public:
     int64_t syncAndPlayNextAudioFrame(AVSink *sink);
     void enqueueVideoFrameIn(AVFrame *frame);
     void enqueueAudioFrameIn(AVFrame *frame);
+    void shutdown();
     void clear();
 };
 #endif //FFMPEGDEMO_MEDIAAVSYNC_H

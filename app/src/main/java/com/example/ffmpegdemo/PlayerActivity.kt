@@ -56,6 +56,7 @@ class PlayerActivity : AppCompatActivity() {
                 Log.i(TAG, "surfaceCreated")
                 //play video
                 ffmpegPlayVideo(fileUrl!!, holder.surface, nativeAudioTrack, playerStateCallback)
+                ffmpegSetLoop(true)
             }
 
             override fun surfaceChanged(
@@ -87,6 +88,8 @@ class PlayerActivity : AppCompatActivity() {
     external fun ffmpegPlayResume()
 
     external fun ffmpegPlayRelease()
+
+    external fun ffmpegSetLoop(loop: Boolean)
 
     interface NativePlayerStateCallback {
         /**

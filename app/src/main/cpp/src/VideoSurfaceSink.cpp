@@ -17,6 +17,7 @@ VideoSurfaceSink::~VideoSurfaceSink() {
 }
 
 void VideoSurfaceSink::processFrame(AVFrame *avFrame) {
+    std::lock_guard<std::mutex> lockGuard(mutex);
     if(nativeWindow != nullptr) {
         ANativeWindow_Buffer buffer;
         int ret = ANativeWindow_lock(nativeWindow, &buffer, nullptr);
@@ -37,6 +38,7 @@ void VideoSurfaceSink::release() {
 }
 
 void VideoSurfaceSink::freeRes() {
+    std::lock_guard<std::mutex> lockGuard(mutex);
     if(nativeWindow != nullptr) {
         ANativeWindow_release(nativeWindow);
         nativeWindow = nullptr;
