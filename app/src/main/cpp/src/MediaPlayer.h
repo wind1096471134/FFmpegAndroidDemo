@@ -14,6 +14,7 @@
 #include "MediaAVSync.h"
 #include "VideoSurfaceSink.h"
 #include "AudioTrackSink.h"
+#include "MediaAVPipeline.h"
 
 enum PlayState {
     INIT,
@@ -42,6 +43,8 @@ private:
     std::shared_ptr<MediaAVSync> mediaAvSync;
     std::shared_ptr<VideoSurfaceSink> videoSink;
     std::shared_ptr<AudioTrackSink> audioSink;
+    std::shared_ptr<MediaAVPipeline> videoPipeline;
+    std::shared_ptr<MediaAVPipeline> audioPipeline;
     std::atomic<bool> isLoop;
     std::string playUrl;
 

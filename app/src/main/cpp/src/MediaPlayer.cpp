@@ -26,10 +26,10 @@ void MediaPlayer::play(std::string& playUrl) {
         //avoid outside class destroy early.
         std::shared_ptr<MediaPlayer> mediaPlayer = shared_from_this();
         while(playState != DESTROY) {
-            mediaAvSync->syncAndPlayNextVideoFrame(videoSink.get());
+            mediaAvSync->syncAndPlayNextVideoFrame(videoPipeline.get());
             waitUntilPlay();
         }
-        videoSink->release();
+        videoPipeline->release();
         mediaAvSync->clear();
         log(LOG_TAG, "videoRenderThread end", mediaPlayer.use_count());
     });
@@ -41,10 +41,10 @@ void MediaPlayer::play(std::string& playUrl) {
         //avoid outside class destroy early.
         std::shared_ptr<MediaPlayer> mediaPlayer = shared_from_this();
         while(playState != DESTROY) {
-            mediaAvSync->syncAndPlayNextAudioFrame(audioSink.get());
+            mediaAvSync->syncAndPlayNextAudioFrame(audioPipeline.get());
             waitUntilPlay();
         }
-        audioSink->release();
+        audioPipeline->release();
         mediaAvSync->clear();
         log(LOG_TAG, "audioPlayThread end", mediaPlayer.use_count());
     });
@@ -62,16 +62,18 @@ void MediaPlayer::clearData() {
         videoDecoder->stopDecode();
         videoDecoder = nullptr;
     }
-    videoSink->release();
-    audioSink->release();
+    videoPipeline->release();
+    audioPipeline->release();
     mediaAvSync->shutdown();
 }
 
 MediaPlayer::MediaPlayer(ANativeWindow *nativeWindow, std::shared_ptr<NativeAudioTrackWrapper> audioTrackWrapper):
         playState(INIT), playStateMutex(), playStateCondition(), isLoop(false) {
-    videoSink = std::make_shared<VideoSurfaceSink>(nativeWindow);
-    audioSink = std::make_shared<AudioTrackSink>(audioTrackWrapper);
     mediaAvSync = std::make_shared<MediaAVSync>();
+    videoSink = std::make_shared<VideoSurfaceSink>(nativeWindow);
+    videoPipeline = std::make_shared<MediaAVPipeline>(videoSink);
+    audioSink = std::make_shared<AudioTrackSink>(audioTrackWrapper);
+    audioPipeline = std::make_shared<MediaAVPipeline>(audioSink);
 }
 
 MediaPlayer::~MediaPlayer() {

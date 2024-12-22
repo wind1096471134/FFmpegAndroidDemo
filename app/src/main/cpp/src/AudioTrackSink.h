@@ -5,10 +5,10 @@
 #ifndef FFMPEGDEMO_AUDIOTRACKSINK_H
 #define FFMPEGDEMO_AUDIOTRACKSINK_H
 
-#include "AVSink.h"
+#include "AVProcessSink.h"
 #include "NativeAudioTrackWrapper.h"
 
-class AudioTrackSink: public AVSink {
+class AudioTrackSink: public AVProcessSink {
 private:
     std::shared_ptr<NativeAudioTrackWrapper> audioTrack;
     void freeRes();

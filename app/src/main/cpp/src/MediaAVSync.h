@@ -6,7 +6,8 @@
 #define FFMPEGDEMO_MEDIAAVSYNC_H
 
 #include "BlockingQueue.h"
-#include "AVSink.h"
+#include "AVProcessNode.h"
+#include "MediaAVPipeline.h"
 
 extern "C"{
 #include "libavutil/frame.h"
@@ -24,8 +25,8 @@ private:
 public:
     MediaAVSync();
     ~MediaAVSync();
-    int64_t syncAndPlayNextVideoFrame(AVSink *sink);
-    int64_t syncAndPlayNextAudioFrame(AVSink *sink);
+    int64_t syncAndPlayNextVideoFrame(MediaAVPipeline *sink);
+    int64_t syncAndPlayNextAudioFrame(MediaAVPipeline *sink);
     void enqueueVideoFrameIn(AVFrame *frame);
     void enqueueAudioFrameIn(AVFrame *frame);
     void shutdown();

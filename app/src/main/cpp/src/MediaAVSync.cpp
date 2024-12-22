@@ -48,7 +48,7 @@ void MediaAVSync::clear() {
     audioTimeBase = {0,1};
 }
 
-int64_t MediaAVSync::syncAndPlayNextVideoFrame(AVSink *sink) {
+int64_t MediaAVSync::syncAndPlayNextVideoFrame(MediaAVPipeline *sink) {
     AVFrame **framePtr = nullptr;
     if(!videoFrames.dequeue(&framePtr) || *framePtr == nullptr) {
         return -1;
@@ -73,16 +73,16 @@ int64_t MediaAVSync::syncAndPlayNextVideoFrame(AVSink *sink) {
     if(delay > 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(delay));
     }
+    int64_t pts = frame->pts;
     //play frame.
     sink->processFrame(frame);
-    videoLastPts = frame->pts;
+    videoLastPts = pts;
     videoLastShowTimestamp = getCurTimestamp();
-    av_frame_free(&frame);
 
     return videoLastPts;
 }
 
-int64_t MediaAVSync::syncAndPlayNextAudioFrame(AVSink *sink) {
+int64_t MediaAVSync::syncAndPlayNextAudioFrame(MediaAVPipeline *sink) {
     AVFrame **framePtr = nullptr;
     if(!audioFrames.dequeue(&framePtr) || *framePtr == nullptr) {
         return -1;
@@ -98,11 +98,11 @@ int64_t MediaAVSync::syncAndPlayNextAudioFrame(AVSink *sink) {
     if(delay > 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(delay));
     }
+    int64_t pts = frame->pts;
     //play frame.
     sink->processFrame(frame);
-    audioLastPts = frame->pts;
+    audioLastPts = pts;
     audioLastShowTimestamp = getCurTimestamp();
-    av_frame_free(&frame);
 
     return audioLastPts;
 }

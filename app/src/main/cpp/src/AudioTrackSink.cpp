@@ -13,6 +13,7 @@ AudioTrackSink::~AudioTrackSink() {
 
 void AudioTrackSink::processFrame(AVFrame *avFrame) {
     this->audioTrack->playFrame(avFrame->data[0], avFrame->linesize[0]);
+    av_frame_free(&avFrame);
 }
 
 void AudioTrackSink::release() {

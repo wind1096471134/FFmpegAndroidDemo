@@ -31,6 +31,7 @@ void VideoSurfaceSink::processFrame(AVFrame *avFrame) {
             ret = ANativeWindow_unlockAndPost(nativeWindow);
         }
     }
+    av_frame_free(&avFrame);
 }
 
 void VideoSurfaceSink::release() {

@@ -6,10 +6,10 @@
 #define FFMPEGDEMO_VIDEOSURFACESINK_H
 
 #include <android/native_window_jni.h>
-#include "AVSink.h"
+#include "AVProcessSink.h"
 #include "mutex"
 
-class VideoSurfaceSink: public AVSink {
+class VideoSurfaceSink: public AVProcessSink {
 private:
     std::mutex mutex;
     ANativeWindow *nativeWindow;
